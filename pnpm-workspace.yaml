@@ -12,3 +12,6 @@ onlyBuiltDependencies:
 allowBuilds:
   esbuild: set this to true or false
   sharp: set this to true or false
+
+patchedDependencies:
+  '@iamsamuelfraga/mcp-pipedrive': patches/@iamsamuelfraga__mcp-pipedrive.patch

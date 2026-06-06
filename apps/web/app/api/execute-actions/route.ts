@@ -1,7 +1,7 @@
 import { actionSchema, type Action } from "@aibeavers/shared";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { useMockAnalysis } from "../lib/env";
+import { allowLiveActionExecution, useMockAnalysis } from "../lib/env";
 import { executeCrmTask } from "../lib/crm";
 import {
   extractIcs,
@@ -134,9 +134,10 @@ export async function POST(request: Request) {
     const { kunde, kunde_email, actions } = parsed.data;
     const results: ActionResult[] = [];
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
+    const liveActionsEnabled = allowLiveActionExecution();
 
     for (const action of actions) {
-      if (useMockAnalysis() && action.typ !== "crm_task") {
+      if (!liveActionsEnabled || (useMockAnalysis() && action.typ !== "crm_task")) {
         const result = mockSuccessResult(action);
         results.push(result);
         plan_steps.push(planStepForAction(action, true));

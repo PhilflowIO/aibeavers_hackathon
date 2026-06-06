@@ -12,6 +12,10 @@ export function useMockAnalysis(): boolean {
   return parseBool(process.env.USE_MOCK_ANALYSIS, true);
 }
 
+export function allowLiveActionExecution(): boolean {
+  return parseBool(process.env.ALLOW_LIVE_ACTION_EXECUTION, false);
+}
+
 export function getQwenConfig() {
   return {
     apiKey: process.env.QWEN_API_KEY ?? "",
@@ -23,8 +27,9 @@ export function getQwenConfig() {
 }
 
 export function getElevenLabsConfig() {
+  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim();
   return {
     apiKey: process.env.ELEVENLABS_API_KEY ?? "",
-    voiceId: process.env.ELEVENLABS_VOICE_ID ?? "21m00Tcm4TlvDq8ikWAM",
+    voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM",
   };
 }

@@ -79,6 +79,11 @@
       "titel": "Folgetermin Berger — Wohn-Riester + ESG nachholen",
       "start": "+7d",
       "dauer_min": 60
+    },
+    {
+      "typ": "email_entwurf",
+      "betreff": "Unterlagen Riester-Rente + Terminbestätigung",
+      "empfaenger": "thomas.berger@example.com"
     }
   ]
 }

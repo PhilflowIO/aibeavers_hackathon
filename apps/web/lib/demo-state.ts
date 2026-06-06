@@ -245,8 +245,13 @@ export function useDemoState(
       kunde_email: "berger@example.de",
       actions: heroActions,
     })
-      .then(() => setShowMailToast(true))
-      .catch(() => setShowMailToast(true));
+      .then((response) => {
+        const ok = response.results.every(
+          (result) => result.status === "success" || result.status === "mocked",
+        );
+        setShowMailToast(ok);
+      })
+      .catch(() => setShowMailToast(false));
   }, [state, analysis, heroExecuted, transcript.kunde]);
 
   // Auto mode: run default Q&A when qa_ready is reached
