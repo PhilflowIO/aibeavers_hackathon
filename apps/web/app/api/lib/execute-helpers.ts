@@ -68,7 +68,7 @@ export function mockSuccessResult(action: Action): ActionResult {
     case "kalender":
       return {
         typ: "kalender",
-        status: "success",
+        status: "mocked",
         message: `Termin „${action.titel}" (Mock) vorbereitet.`,
       };
     case "crm_task":
@@ -85,7 +85,7 @@ export function mockSuccessResult(action: Action): ActionResult {
     case "email_entwurf":
       return {
         typ: "email_entwurf",
-        status: "success",
+        status: "mocked",
         message: `E-Mail-Entwurf „${action.betreff}" (Mock) bereit.`,
       };
     default: {

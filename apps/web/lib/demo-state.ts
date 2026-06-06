@@ -73,6 +73,29 @@ export interface DemoStateContext {
   visiblePlanSteps: PlanStep[];
 }
 
+/**
+ * Überlagert die sichtbaren Plan-Schritte mit den nach der Hero-Ausführung
+ * zurückgelieferten plan_steps: passende Schritte (z.B. „Folgetermin")
+ * kippen von „warn" auf den ausgeführten Status (i.d.R. „done").
+ */
+function applyExecutedSteps(
+  steps: PlanStep[],
+  executed: PlanStep[] | null,
+): PlanStep[] {
+  if (!executed || executed.length === 0) return steps;
+  return steps.map((step) => {
+    const match = executed.find(
+      (e) =>
+        e.schritt === step.schritt ||
+        (step.schritt.toLowerCase().includes("folgetermin") &&
+          e.schritt.toLowerCase().includes("folgetermin")) ||
+        (step.schritt.toLowerCase().includes("folgetermin") &&
+          e.schritt.toLowerCase().includes("termin")),
+    );
+    return match ? { ...step, status: match.status } : step;
+  });
+}
+
 function getVisibleSteps(
   analysis: AnalyseResult | null,
   revealedCount: number,
@@ -99,6 +122,9 @@ export function useDemoState(
   );
   const [heroExecution, setHeroExecution] =
     useState<ActionExecutionInfo | null>(null);
+  const [executedPlanSteps, setExecutedPlanSteps] = useState<PlanStep[] | null>(
+    null,
+  );
   const qaAutoRanRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -150,6 +176,7 @@ export function useDemoState(
     setShowMailToast(false);
     setCrmExecuted(false);
     setHeroExecuted(false);
+    setExecutedPlanSteps(null);
     setAnalysis(null);
     setRevealedStepCount(0);
     setState("analyzing");
@@ -203,6 +230,7 @@ export function useDemoState(
     setHeroExecuted(false);
     setCrmExecution(null);
     setHeroExecution(null);
+    setExecutedPlanSteps(null);
     qaAutoRanRef.current = false;
   }, [clearTimers]);
 
@@ -255,8 +283,28 @@ export function useDemoState(
         const ok = response.results.every(
           (result) => result.status === "success" || result.status === "mocked",
         );
-        setHeroExecution({ status: ok ? "success" : "error" });
+        // Echter Live-Versand nur, wenn ein kalender/email-Ergebnis
+        // status 'success' MIT external_id (Message-ID) liefert.
+        const liveResult = response.results.find(
+          (r) =>
+            (r.typ === "kalender" || r.typ === "email_entwurf") &&
+            r.status === "success" &&
+            Boolean(r.external_id),
+        );
+        const isLive = Boolean(liveResult);
+        setHeroExecution(
+          ok
+            ? {
+                status: isLive ? "success" : "mocked",
+                isLive,
+                externalId: liveResult?.external_id,
+              }
+            : { status: "error" },
+        );
         setShowMailToast(ok);
+        // Plan-Checklist: zurückgelieferte plan_steps überlagern,
+        // damit „Folgetermin" nach der Ausführung auf done kippt.
+        setExecutedPlanSteps(response.plan_steps ?? null);
       })
       .catch(() => {
         setHeroExecution({ status: "error" });
@@ -307,6 +355,9 @@ export function useDemoState(
     runQa,
     crmExecution,
     reset,
-    visiblePlanSteps: getVisibleSteps(analysis, revealedStepCount),
+    visiblePlanSteps: applyExecutedSteps(
+      getVisibleSteps(analysis, revealedStepCount),
+      executedPlanSteps,
+    ),
   };
 }
