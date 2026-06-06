@@ -7,11 +7,29 @@ export type { CrmContext, CrmExecutionResult } from "./types";
 
 type CrmProviderName = "mock" | "hubspot" | "pipedrive";
 
+function getPipedriveToken(): string {
+  return (
+    process.env.PIPEDRIVE_API_TOKEN?.trim() ||
+    process.env.Pipedrive_API_Key?.trim() ||
+    ""
+  );
+}
+
+function getPipedriveCompanyDomain(): string {
+  return (
+    process.env.PIPEDRIVE_COMPANY_DOMAIN?.trim() ||
+    process.env.Pipedrive_Company_Domain?.trim() ||
+    ""
+  );
+}
+
 function getCrmProvider(): CrmProviderName {
   const raw = process.env.CRM_PROVIDER?.toLowerCase();
   if (raw === "hubspot" || raw === "pipedrive" || raw === "mock") {
     return raw;
   }
+  // Phil's agent uses Pipedrive_API_Key — auto-enable when token is present.
+  if (getPipedriveToken()) return "pipedrive";
   return "mock";
 }
 
@@ -51,8 +69,8 @@ export async function executeCrmTask(
     }
 
     if (provider === "pipedrive") {
-      const token = process.env.PIPEDRIVE_API_TOKEN?.trim();
-      const domain = process.env.PIPEDRIVE_COMPANY_DOMAIN?.trim();
+      const token = getPipedriveToken();
+      const domain = getPipedriveCompanyDomain();
       if (!token || !domain) return mockResult(action, ctx);
       return await createPipedriveProvider(token, domain).createTask(
         action,

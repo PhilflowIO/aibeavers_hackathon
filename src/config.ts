@@ -97,7 +97,10 @@ export const loadSmtpConfig = () =>
     SMTP_PORT: process.env.SMTP_PORT,
     SMTP_SECURE: process.env.SMTP_SECURE,
     SMTP_USER: process.env.SMTP_User ?? process.env.SMTP_USER,
-    SMTP_PASSWORD: process.env.SMTP_Key ?? process.env.SMTP_PASSWORD,
+    SMTP_PASSWORD:
+      process.env.SMTP_Key ??
+      process.env.SMTP_PASS ??
+      process.env.SMTP_PASSWORD,
     // Absender = explizit gesetztes SMTP_FROM, sonst der Login-User.
     SMTP_FROM: process.env.SMTP_FROM ?? process.env.SMTP_User ?? process.env.SMTP_USER,
   });
@@ -109,14 +112,25 @@ export const loadImapConfig = () =>
     IMAP_SECURE: process.env.IMAP_SECURE,
     // Gleiches Postfach wie SMTP — IMAP_*-Override möglich, sonst SMTP-Creds.
     IMAP_USER: process.env.IMAP_User ?? process.env.IMAP_USER ?? process.env.SMTP_User ?? process.env.SMTP_USER,
-    IMAP_PASSWORD: process.env.IMAP_Key ?? process.env.IMAP_PASSWORD ?? process.env.SMTP_Key ?? process.env.SMTP_PASSWORD,
+    IMAP_PASSWORD:
+      process.env.IMAP_Key ??
+      process.env.IMAP_PASSWORD ??
+      process.env.SMTP_Key ??
+      process.env.SMTP_PASS ??
+      process.env.SMTP_PASSWORD,
   });
 
 export const loadCaldavConfig = () =>
   load(caldavSchema, "caldav", {
-    CALDAV_SERVER_URL: process.env.CALDAV_SERVER_URL ?? process.env.DAV_URL,
+    CALDAV_SERVER_URL:
+      process.env.CALDAV_SERVER_URL ??
+      process.env.CALDAV_URL ??
+      process.env.DAV_URL,
     CALDAV_USER: process.env.CALDAV_USER ?? process.env.DAV_User,
-    CALDAV_PASSWORD: process.env.CALDAV_PASSWORD ?? process.env.DAV_Key,
+    CALDAV_PASSWORD:
+      process.env.CALDAV_PASSWORD ??
+      process.env.CALDAV_PASS ??
+      process.env.DAV_Key,
     CALDAV_CALENDAR_NAME: process.env.CALDAV_CALENDAR_NAME,
   });
 
@@ -125,10 +139,16 @@ export const loadCaldavConfig = () =>
 export const loadCarddavConfig = () =>
   load(carddavSchema, "carddav", {
     CARDDAV_SERVER_URL:
-      process.env.CARDDAV_SERVER_URL ?? process.env.CALDAV_SERVER_URL ?? process.env.DAV_URL,
+      process.env.CARDDAV_SERVER_URL ??
+      process.env.CALDAV_SERVER_URL ??
+      process.env.CALDAV_URL ??
+      process.env.DAV_URL,
     CARDDAV_USER: process.env.CARDDAV_USER ?? process.env.CALDAV_USER ?? process.env.DAV_User,
     CARDDAV_PASSWORD:
-      process.env.CARDDAV_PASSWORD ?? process.env.CALDAV_PASSWORD ?? process.env.DAV_Key,
+      process.env.CARDDAV_PASSWORD ??
+      process.env.CALDAV_PASSWORD ??
+      process.env.CALDAV_PASS ??
+      process.env.DAV_Key,
     CARDDAV_ADDRESS_BOOK_NAME: process.env.CARDDAV_ADDRESS_BOOK_NAME,
   });
 

@@ -13,9 +13,9 @@ export function RoadmapBanner() {
         i
       </span>
       <p className="text-xs leading-relaxed text-ink-faint">
-        <span className="font-medium text-ink-muted">Ehrlich:</span> CRM- und
-        Antrags-Integrationen laufen heute als ausgeführte Demo-Aktionen — echte
-        HubSpot/Pipedrive-Anbindung folgt in der nächsten Iteration.
+        <span className="font-medium text-ink-muted">Ehrlich:</span> Pipedrive-CRM
+        und Baikal-Kalender laufen live, wenn die Server-Creds gesetzt sind.
+        Antrags-Vorbereitung bleibt Demo-Panel (noch kein echter Versand).
       </p>
     </aside>
   );
