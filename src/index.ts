@@ -139,8 +139,13 @@ function buildBriefing(x: ExtractedActions): string {
           ? "\n→ Bestimme den Empfänger mit resolve_contact (Name: \"" +
             kundeName +
             "\") und formuliere eine kurze, freundliche E-Mail an die so verifizierte Adresse. " +
-            "Bei resolved:false NICHT senden, sondern die Lücke melden."
-          : "\n→ Sobald ein Kundenname/eine verifizierte E-Mail vorliegt, per send_email anfordern.")
+            "Bei resolved:false NICHT senden, sondern die Lücke melden." +
+            "\n→ ACHTUNG Anhänge: Du kannst diese Unterlagen NICHT als Datei anhängen (send_email " +
+            "hängt nur den Kalender-ICS an). Schreibe daher NICHT \"anbei\"/\"im Anhang\"/\"beigefügt\". " +
+            "Kündige die Unterlagen ehrlich an (\"ich stelle sie zusammen und sende sie Ihnen separat zu\") " +
+            "bzw. fordere sie an — niemals einen Anhang behaupten, der nicht existiert."
+          : "\n→ Sobald ein Kundenname/eine verifizierte E-Mail vorliegt, per send_email anfordern. " +
+            "Keine Datei-Anhänge möglich — Unterlagen ankündigen/anfordern, nicht \"anbei\" behaupten.")
     );
   }
 
