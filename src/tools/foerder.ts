@@ -23,7 +23,7 @@ export async function loadFoerderTools(): Promise<DynamicStructuredTool[]> {
       // und den bereits ingestierten Qdrant-Index findet. Env-überschreibbar.
       cwd:
         process.env.FOERDER_PROJECT_DIR ??
-        "/home/philflow/Dokumente/AI_Beaver-foerder/Fördermittel",
+        "/home/philflow/Dokumente/AI_Beaver-live/Fördermittel",
       env: { ...buildEnv() },
     },
   });
