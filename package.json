@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
-    "typecheck:web": "pnpm --filter web exec tsc --noEmit"
+    "typecheck:web": "pnpm --filter web exec tsc --noEmit",
+    "deploy:web": "bash scripts/deploy-web.sh"
   },
   "license": "UNLICENSED",
   "dependencies": {
