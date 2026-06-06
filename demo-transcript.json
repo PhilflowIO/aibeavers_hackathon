@@ -1,7 +1,6 @@
 {
   "_hinweis": "Demo-Input. KEIN Recording nötig — das ist das vorbereitete Transkript, auf dem der Agent arbeitet. speaker + start_sec/end_sec = Grounding-Substrat (klickbarer Beleg). Optional: per ElevenLabs (2 Stimmen) in Audio wandeln, falls ein 'abgespielter Call'-Moment gewünscht ist.",
   "kunde": "Thomas Berger",
-  "kunde_email": "aibeavers@philflow.io",
   "meetings": [
     {
       "meeting_id": "berger-1",

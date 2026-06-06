@@ -1,0 +1,51 @@
+{
+  "company_name": "Der Nacharbeits-Agent",
+  "tagline": "Der Berater closed im Gespräch. Die Nacharbeit erledigt der Agent.",
+  "structure_note": "7-Slide-Synthese (Konsortium + Judge-Reviewer). Bogen: Kai-Klammer (öffnet S1 → Demo-Payoff S4 → Echo-Close S7), Capture/Souveränität als Moat HINTER der Demo (S5), Markt=Moat-Story (S6). Cold-Viewer-Onboarding über die menschliche Figur, nicht über Technik.",
+  "first_sentence": "Das ist Kai — selbstständiger Finanzberater. Er bezahlt jeden Monat für einen KI-Notetaker und sagt mir wörtlich: ‚Die wichtigsten Punkte schreibe ich mir auf — und schau eigentlich nie rein.'",
+
+  "slide1_kai_hook": [
+    "Kai — selbstständiger Finanzberater (§34d/§34f), lebt von der Abschlussquote.",
+    "Quote (echt): „Ich hab Sally, aber die wichtigsten Punkte schreibe ich auf und schau eigentlich nie bei Sally rein.\"",
+    "Er bezahlt monatlich für einen Notetaker — und benutzt ihn nicht. Das ist die Anomalie, mit der wir öffnen (kein Jargon, ein Mensch)."
+  ],
+  "slide2_problem": [
+    "Nach dem mündlichen 'ja' im Gespräch passiert: nichts. Notetaker sind passiv — sie fassen zusammen, dann hört es auf.",
+    "~30 Min Nacharbeit pro Gespräch (Folgetermin, CRM, Antrag, Pflichtfelder) — von Hand abends oder gar nicht.",
+    "Da sterben Abschlüsse, die im Raum schon 'ja' waren. Der Schmerz ist verlorener Umsatz, nicht Komfort.",
+    "KONTRAST-PAAR (Marktbeleg, ersetzt n=1): 35 Mio. Menschen nutzen Otter, 1 Mrd. Meetings verarbeitet (BusinessWire 2025) — aber 95 % der GenAI-Pilots in Unternehmen liefern null messbaren Return (MIT Project NANDA 2025). 'Bezahlt und ignoriert' auf Marktebene. Kai ist das Gesicht, das die Zahl.",
+    "Optional-Stütze (DE, frisch): 45,7 % der Versicherungsmakler verlieren ~1 Arbeitstag/Woche an Regulatorik (BFV/AssCompact 2025, N=565). [VERIFY: exakte Studien-URL auf asscompact.de vor dem Pitch gegenfassen.]"
+  ],
+  "slide3_solution_thesis": [
+    "Wir fassen nicht zusammen — wir handeln. Input = Transkript, Output = ausgeführte Folgeaktionen.",
+    "Der Agent legt den Folgetermin an + verschickt die echte Kalender-Einladung, trägt ins CRM ein, füllt den Antrag vor (162 €, 'ausgewogen'), erkennt fehlende Pflichtfelder (ESG §34d).",
+    "Die Linie, die alles trägt: Notetaker sagen. Unser Agent tut. (Produkt-These VOR der Technik.)"
+  ],
+  "slide4_demo": [
+    "LIVE: Transkript rein → der Agent erzeugt den Folgetermin → die echte Kalender-Einladung kommt live an (bei Kai).",
+    "Die Demo läuft end-to-end und zeigt den vollen Plan, der sich abhakt — Folgetermin/Einladung, CRM-Eintrag, Antrag, ESG-Lücke (und weitere Schritte).",
+    "„Das hat er gerade getan — nicht vorgeschlagen, getan.\" Der Beweis schlägt jede Behauptung. (Fallback-Recording als Absicherung bereithalten.)"
+  ],
+  "slide5_moat_sovereignty": [
+    "Der Einwand nach der Demo: „Kann das nicht jeder bauen?\" — Antwort: dürfen sie nicht.",
+    "US-Notetaker (Otter, Fireflies, Jamie, Sally) sind bei §34d-Beratungsprotokollen + §34f-Geeignetheitserklärungen strukturell unzulässig — US-Cloud bei Mandanten-Finanzdaten geht nicht.",
+    "Souverän ist kein Feature, es ist die Eintrittskarte. Capture-Leiter als 1-Zeilen-Beweis (KEINE Architektur): on-device (Meetily) → EU (Voxtral/Mistral) → eigene GPU (Raven). Roadmap: Attendee/Zoom-Bot für Online-Calls.",
+    "KONTRAST-PAAR (Souveränität beziffert): 50 % der deutschen Cloud-Nutzer misstrauen US-Anbietern (Bitkom 2025) · €5,88 Mrd. kumulierte DSGVO-Bußgelder seit 2018 (DLA Piper 2025). Bei Mandanten-Finanzdaten ist US-Cloud Haftungsrisiko, kein 'Bedenken'."
+  ],
+  "slide6_market": [
+    "~88.000 selbst-kaufende Berater in DE (DIHK-Vermittlerregister 01.01.2026: 46.885 §34d + 41.243 §34f) — ein Markt, in dem die offensichtlichen US-Player nicht spielen dürfen.",
+    "€99/Seat/Monat (€1.188/Jahr) → SAM DE ≈ €105 Mio/Jahr. 1 % = 880 Berater ≈ €1,05 Mio ARR; 5 % = 4.400 ≈ €5,2 Mio ARR.",
+    "Wettbewerb in einer Zeile: Status quo (Handarbeit), US-Notetaker (unzulässig), generische CRM-Automatisierung (kennt §34d nicht).",
+    "KONTRAST-PAAR (Why-now, CAGR-Schere): Notetaker-Markt wächst ~25 % CAGR (Grand View 2025), der AI-Agents-Markt ~45 % (MarketsandMarkets 2025) — fast doppelt so schnell. Zusammenfassen ist die schrumpfende Hälfte, Handeln die wachsende. Wir stehen in der schnelleren."
+  ],
+  "slide7_team": [
+    "Phil — Produkt, Pitch. Betreibt die souveräne Infra (Raven/GPU) selbst — die Eintrittskarte aus Slide 5 ist gebaut, nicht versprochen. Meeting-Intelligence live in Produktion.",
+    "Jacob — Agent-Verdrahtung, UI (Plan-Checkliste + Panels), echter Google-Kalender-Call, LangChain mit echten Tool-Calls.",
+    "Why now: Agentic AI macht 'handeln statt zusammenfassen' erst jetzt möglich; ESG-Pflicht (§34d, seit 02.08.2022) + DSGVO machen US-Tools jetzt unzulässig.",
+    "Echo-Close (Callback auf Kai): „Kai schaut nie bei Sally rein. Bei uns muss er nur noch gegenzeichnen.\""
+  ],
+
+  "price": "€99/Seat/Monat (€1.188/Jahr) — bestätigt",
+  "demo_url": "[PLATZHALTER: hosted preview URL — eintragen sobald deployed, Slide-2/4-QR]",
+  "contact": "[PLATZHALTER: name@domain · LinkedIn]"
+}
