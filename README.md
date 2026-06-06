@@ -75,7 +75,7 @@ Der **Agent-Layer (Schritt 1)** — das Fundament, auf dem die Demo läuft: ein 
 
 ```bash
 pnpm install
-cp .env.example .env     # Credentials: Anthropic · SMTP · IMAP · CalDAV
+cp .env.example .env     # Credentials: Qwen/DashScope · SMTP · IMAP · CalDAV
 pnpm typecheck
 ```
 
@@ -90,6 +90,22 @@ pnpm agent "Lege am 12.06.2026 um 10:00 einen 45-Min-Folgetermin mit Herrn Berge
 # Interaktive REPL
 pnpm agent
 ```
+
+---
+
+## Demo-UI
+
+Die HERO-Demo läuft als Next.js-App unter `apps/web`:
+
+```bash
+pnpm install && pnpm dev:web
+# → http://localhost:3000
+```
+
+`USE_MOCK_ANALYSIS` ist standardmäßig `true` — die UI läuft so **ohne Credentials** (gemockte Analyse/QA). Für den **LIVE-Hero** (echte Kalender-Einladung + echte Mail) müssen in `.env` gesetzt sein:
+
+- `USE_MOCK_ANALYSIS=false` + `ALLOW_LIVE_ACTION_EXECUTION=true`
+- SMTP-Credentials (`SMTP_HOST` etc.) und CalDAV-Credentials (`CALDAV_SERVER_URL` etc.)
 
 ---
 
