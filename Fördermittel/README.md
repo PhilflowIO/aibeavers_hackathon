@@ -101,6 +101,25 @@ Switching the **embedding provider** (e.g. to a self-hosted TEI) is implementing
 `get_provider()`. Switching the **vector store** to embedded vs server is just
 `FOERDER_QDRANT_URL`.
 
+## Berater agent (LangChain + the MCP tools)
+
+An optional **Fördermittel-Berater** — a Qwen-driven LangChain/LangGraph agent that
+consults a citizen by *iteratively* calling the two MCP tools (intake → `search_funding`
+over several rounds with `funding_location` = Bundesland **and** "bundesweit" so federal
+BEG/KfW/BAFA programmes surface → `get_program` eligibility check → shortlist with reasons,
+combinability notes, next steps + links). Orientation, not legal advice.
+
+```bash
+uv sync --group agent                                   # langchain + langgraph + mcp adapters
+# DASHSCOPE_API_KEY + QWEN_BASE_URL in .env (Qwen, OpenAI-compatible); index must be ingested
+uv run foerder-berater "Privatperson in Bayern, Bestand, Gasheizung raus, Wärmepumpe rein, ~30k €"
+uv run foerder-berater                                  # interactive REPL
+```
+
+It loads the same FastMCP server (`search_funding`/`get_program`) via
+`langchain-mcp-adapters` — so the agent talks to the identical tool surface the Docker
+stack serves, which is also the seam for a future multi-agent handoff.
+
 ## Build it
 
 Hand `BUILD_PROMPT.md` to a fresh agent session. It rebuilds everything from scratch

@@ -90,6 +90,13 @@ class Settings(BaseSettings):
     # Secret — read from DEEPINFRA_TOKEN (no FOERDER_ prefix), never committed.
     deepinfra_token: str = Field(default="", alias="DEEPINFRA_TOKEN")
 
+    # Qwen LLM for the Berater agent (OpenAI-compatible DashScope endpoint).
+    # Secrets/endpoint come from the hackathon sponsor via ENV (no FOERDER_
+    # prefix on the alias); the model id is env-overridable via FOERDER_QWEN_MODEL.
+    qwen_api_key: str = Field(default="", alias="DASHSCOPE_API_KEY")
+    qwen_base_url: str = Field(default="", alias="QWEN_BASE_URL")
+    qwen_model: str = "qwen3.7-max"
+
     # Tokenizer for chunking (no torch needed). HF id; cached under hf_cache_dir.
     tokenizer_model: str = "Qwen/Qwen3-Embedding-0.6B"
     hf_cache_dir: Path = Path(".hf_cache")

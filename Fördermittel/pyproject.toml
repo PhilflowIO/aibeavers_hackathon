@@ -23,8 +23,15 @@ dependencies = [
 [project.scripts]
 foerder-ingest = "foerder.ingest:main"
 foerder-mcp = "foerder.mcp_server:main"
+foerder-berater = "foerder.berater:main"
 
 [dependency-groups]
+agent = [
+    "langchain>=1.3.4",
+    "langchain-mcp-adapters>=0.2.2",
+    "langchain-openai>=1.2.2",
+    "langgraph>=1.2.4",
+]
 dev = [
     "ruff>=0.6",
     "mypy>=1.11",
@@ -57,5 +64,15 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["snowballstemmer.*", "stop_words.*"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = [
+    "langchain.*",
+    "langchain_openai.*",
+    "langgraph.*",
+    "langchain_mcp_adapters.*",
+]
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
