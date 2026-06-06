@@ -58,6 +58,16 @@ const caldavSchema = z.object({
   CALDAV_CALENDAR_NAME: z.string().optional(),
 });
 
+// CardDAV (Baikal) — bei Baikal derselbe Server + dieselben Creds wie CalDAV,
+// nur ein anderer Account-Typ. Daher sind CARDDAV_*-Variablen optional und
+// fallen auf die CalDAV-/DAV-Werte zurück (siehe loadCarddavConfig).
+const carddavSchema = z.object({
+  CARDDAV_SERVER_URL: z.string().url("CARDDAV_SERVER_URL/CALDAV_SERVER_URL/DAV_URL muss eine URL sein"),
+  CARDDAV_USER: z.string().min(1, "DAV_User fehlt"),
+  CARDDAV_PASSWORD: z.string().min(1, "DAV_Key fehlt"),
+  CARDDAV_ADDRESS_BOOK_NAME: z.string().optional(),
+});
+
 function load<T extends z.ZodTypeAny>(
   schema: T,
   label: string,
@@ -110,7 +120,20 @@ export const loadCaldavConfig = () =>
     CALDAV_CALENDAR_NAME: process.env.CALDAV_CALENDAR_NAME,
   });
 
+// Fällt auf die CalDAV-/DAV-Creds zurück — bei Baikal identisch. Eigene
+// CARDDAV_*-Variablen nur nötig, wenn Server/Adressbuch abweichen.
+export const loadCarddavConfig = () =>
+  load(carddavSchema, "carddav", {
+    CARDDAV_SERVER_URL:
+      process.env.CARDDAV_SERVER_URL ?? process.env.CALDAV_SERVER_URL ?? process.env.DAV_URL,
+    CARDDAV_USER: process.env.CARDDAV_USER ?? process.env.CALDAV_USER ?? process.env.DAV_User,
+    CARDDAV_PASSWORD:
+      process.env.CARDDAV_PASSWORD ?? process.env.CALDAV_PASSWORD ?? process.env.DAV_Key,
+    CARDDAV_ADDRESS_BOOK_NAME: process.env.CARDDAV_ADDRESS_BOOK_NAME,
+  });
+
 export type LlmConfig = z.infer<typeof llmSchema>;
 export type SmtpConfig = z.infer<typeof smtpSchema>;
 export type ImapConfig = z.infer<typeof imapSchema>;
 export type CaldavConfig = z.infer<typeof caldavSchema>;
+export type CarddavConfig = z.infer<typeof carddavSchema>;
