@@ -1,7 +1,7 @@
 import { actionSchema, type Action } from "@aibeavers/shared";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { allowLiveActionExecution, useMockAnalysis } from "../lib/env";
+import { allowLiveActionExecution } from "../lib/env";
 import { executeCrmTask } from "../lib/crm";
 import {
   extractIcs,
@@ -20,7 +20,6 @@ const requestSchema = z.object({
 
 const DEMO_KUNDE = "Thomas Berger";
 const DEMO_KUNDE_EMAIL = "thomas.berger@example.com";
-const LIVE_EXECUTION_SECRET_HEADER = "x-demo-execution-secret";
 
 function isAllowedLiveDemoRequest(
   kunde: string,
@@ -62,12 +61,6 @@ function hasDuplicateActions(actions: Action[]): boolean {
   return new Set(actions.map((action) => JSON.stringify(action))).size !== actions.length;
 }
 
-function hasLiveExecutionSecret(request: Request): boolean {
-  const secret = process.env.LIVE_ACTION_EXECUTION_SECRET?.trim();
-  if (!secret) return false;
-  return request.headers.get(LIVE_EXECUTION_SECRET_HEADER) === secret;
-}
-
 async function executeKalenderLive(
   action: Extract<Action, { typ: "kalender" }>,
   kunde: string,
@@ -93,7 +86,9 @@ async function executeKalenderLive(
   });
 
   const calText = String(calResult);
-  if (calText.includes("konnte nicht angelegt")) {
+  // Strukturell auf den Fehler-Marker prüfen (createEventTool gibt bei HTTP-Fehler
+  // "CALENDAR_ERROR …" zurück) — kein Abgleich auf deutschen Fließtext.
+  if (calText.startsWith("CALENDAR_ERROR")) {
     return {
       typ: "kalender",
       status: "error",
@@ -155,6 +150,7 @@ async function executeActionLive(
           typ: "email_entwurf",
           status: "success",
           message: String(mailResult),
+          external_id: /Message-ID:\s*(\S+)/.exec(String(mailResult))?.[1],
         };
       }
       default: {
@@ -191,13 +187,18 @@ export async function POST(request: Request) {
 
     const results: ActionResult[] = [];
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
+    // Live-Ausführung wird allein über ALLOW_LIVE_ACTION_EXECUTION + die strikte
+    // Allowlist freigeschaltet. Kein Client-Secret-Header (die Demo-UI sendet keins),
+    // die Allowlist begrenzt echte Seiteneffekte auf exakt den Berger-Demo-Request.
     const liveActionsEnabled =
       allowLiveActionExecution() &&
-      hasLiveExecutionSecret(request) &&
       isAllowedLiveDemoRequest(kunde, kunde_email, actions);
 
     for (const action of actions) {
-      if (!liveActionsEnabled || (useMockAnalysis() && action.typ !== "crm_task")) {
+      // kalender/email_entwurf/crm_task laufen live, sobald liveActionsEnabled —
+      // unabhängig von useMockAnalysis(). So ist deterministische Mock-Analyse +
+      // eine ECHTE Kalendereinladung gleichzeitig möglich (Bühnen-Demo).
+      if (!liveActionsEnabled) {
         const result = mockSuccessResult(action);
         results.push(result);
         plan_steps.push(planStepForAction(action, true));

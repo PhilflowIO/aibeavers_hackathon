@@ -79,9 +79,11 @@ export const MOCK_ANALYSE: AnalyseResult = {
       faelligkeit: "+7d",
     },
     {
+      // Muss EXAKT zur Live-Allowlist in execute-actions/route.ts passen
+      // (isAllowedLiveDemoRequest), sonst bleibt die echte Einladung gesperrt.
       typ: "kalender",
-      titel: "Folgetermin Thomas Berger — Riester-Abschluss + ESG",
-      start: "2026-06-11T10:00:00",
+      titel: "Folgetermin Berger — Wohn-Riester + ESG nachholen",
+      start: "+7d",
       dauer_min: 60,
     },
     {

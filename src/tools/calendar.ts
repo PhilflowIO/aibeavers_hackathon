@@ -305,7 +305,10 @@ export const createEventTool = tool(
     });
 
     if (!res.ok) {
-      return `Termin konnte nicht angelegt werden (HTTP ${res.status}). Server: ${res.statusText}`;
+      // Strukturell erkennbarer Fehler-Marker (CALENDAR_ERROR) am Zeilenanfang,
+      // damit Aufrufer (z.B. execute-actions/route.ts) nicht auf den deutschen
+      // Fließtext angewiesen sind.
+      return `CALENDAR_ERROR Termin konnte nicht angelegt werden (HTTP ${res.status}). Server: ${res.statusText}`;
     }
     return [
       `Termin "${title}" angelegt (${start} → ${end}).`,
