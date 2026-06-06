@@ -1,0 +1,62 @@
+# foerder — local/dev stack: Qdrant + the foerder app (MCP server).
+#
+#   cp docker/.env.example docker/.env   # then fill DEEPINFRA_TOKEN
+#   docker compose -f docker/docker-compose.yml up -d --build
+#
+# Ingest (one-shot, populates the Qdrant collection + DuckDB detail store):
+#   docker compose -f docker/docker-compose.yml run --rm app foerder-ingest
+#
+# The MCP server is then reachable at http://localhost:8000 (streamable-HTTP).
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    ports:
+      # Published for local debugging (Qdrant dashboard / REST). The app talks
+      # to it over the compose network as http://qdrant:6333 regardless.
+      - "6333:6333"
+    healthcheck:
+      # /healthz is plain HTTP 200 once Qdrant is ready. Avoids needing curl
+      # in the image (qdrant ships a static binary, no shell tools assumed).
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/6333 && echo -e 'GET /healthz HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      # Context is the Fördermittel root so the Dockerfile can COPY the package,
+      # manifests, README and fetch_data.sh.
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Explicit, authoritative — overrides whatever is (or isn't) in .env.
+      FOERDER_QDRANT_URL: http://qdrant:6333
+      FOERDER_MCP_TRANSPORT: streamable-http
+    volumes:
+      # Persist the cleaned parquet + DuckDB detail file + fetched raw dump.
+      - app_data:/app/data
+      # Persist the Qwen tokenizer download so it isn't re-pulled every run.
+      - hf_cache:/app/.hf_cache
+    ports:
+      - "8000:8000"
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    extra_hosts:
+      # Lets the app container reach a host-running Ollama daemon on Linux.
+      - "host.docker.internal:host-gateway"
+    # Default command (foerder-mcp) comes from the image CMD.
+
+volumes:
+  qdrant_storage:
+  app_data:
+  hf_cache:

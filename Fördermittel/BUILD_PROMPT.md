@@ -32,11 +32,20 @@ iterativ. Plus optional ein „Fördermittel-Berater"-Subagent obendrauf.
    - `data_processing/src/processing/` → clean→taxonomy→uuid Pipeline (Spec C)
    Ignoriere den Rest (Streamlit, FastAPI-Server-Wrapper, Postgres, Ollama) — Ballast.
 
-2. **Datenquelle (Daten, frei nutzbar)** — CorrelAid-Dump der offiziellen Bundes-Förderdatenbank
-   (foerderdatenbank.de; KfW + BAFA + alle Länder + EU), ~2.500 aktive Programme, alle 2 Tage
-   frisch, CC BY-ND 3.0 DE.
+2. **Datenquelle — ÖFFENTLICH, LIVE ziehen, NICHTS bundlen.** CorrelAid-Dump der offiziellen
+   Bundes-Förderdatenbank (foerderdatenbank.de; KfW + BAFA + alle Länder + EU), ~2.500 aktive
+   Programme, alle 2 Tage frisch, CC BY-ND 3.0 DE.
+   - **Kein Datensatz wird ins Repo committed.** Die Daten werden bei jedem Ingest frisch geladen.
+   - In diesem Ordner liegt bereits **`fetch_data.sh`** (on-demand-Fetcher) + **`README.md`**
+     (Projekt-Übersicht + Datenherkunft). Nutze `fetch_data.sh` (oder denselben URL in-code) im
+     Ingest; `data/` gehört in `.gitignore`.
+   - **OFFLINE-FALLBACK (schlechtes Internet):** eine frische Kopie liegt bereits vor unter
+     `./data/funding_raw.parquet` (relativ zu diesem Ordner; 2563 Zeilen, 26 Spalten, 2472 aktiv).
+     Ingeste primär aus dieser Datei, wenn vorhanden; `fetch_data.sh` ist zum Refresh, sobald
+     wieder Netz da ist. Also: kein Download nötig, um zu bauen.
    - ZIP: `https://foerderdatenbankdump.fra1.cdn.digitaloceanspaces.com/data/parquet_data.zip`
-     → enthält `data.parquet`.
+     → enthält genau eine `*.parquet` (Member-Name nicht hardcoden — generisch die `.parquet`
+     extrahieren, wie `fetch_data.sh` es tut).
    - Schema (26 Spalten, relevant): `id_hash, title, description`(HTML)`, more_info, legal_basis,
      contact_info_*, funding_type[], funding_area[], funding_location[], eligible_applicants[],
      funding_body, url, further_links[], last_updated, on_website_from, deleted`(bool).
@@ -198,8 +207,9 @@ config       env-overridable (provider, modell, qdrant-url, pfade, semantic_weig
 ---
 
 ## DEFINITION OF DONE
-1. `docker compose up` bringt qdrant + app hoch; Ingest füllt ~2.500 Programme (dense+sparse) +
-   DuckDB-Detail. Self-contained, kein externer Server.
+1. `docker compose up` bringt qdrant + app hoch; Ingest zieht die Daten **live** (`fetch_data.sh`,
+   nichts gebundelt/committed) und füllt ~2.500 Programme (dense+sparse) + DuckDB-Detail.
+   Self-contained, kein externer Server. `data/` ist git-ignored.
 2. `search_funding("Dachdämmung NRW privater Eigentümer")` liefert das NRW-Sanierungs-/
    Wärmeschutz-Cluster in den Top-Ergebnissen; „Wärmepumpe Privatperson" → BEG-EM/Heizungs-Cluster;
    „Pflege-WG" → ambulant-betreute-Wohngemeinschaft-Programm.

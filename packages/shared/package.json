@@ -1,0 +1,22 @@
+{
+  "name": "@aibeavers/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas/transcript": "./src/schemas/transcript.ts",
+    "./schemas/analysis": "./src/schemas/analysis.ts",
+    "./schemas/qa": "./src/schemas/qa.ts",
+    "./mocks/analysis-berger-1": "./src/mocks/analysis-berger-1.json",
+    "./mocks/qa-sparrate": "./src/mocks/qa-sparrate.json",
+    "./mocks/qa-offene-punkte": "./src/mocks/qa-offene-punkte.json",
+    "./mocks/qa-refusal": "./src/mocks/qa-refusal.json"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

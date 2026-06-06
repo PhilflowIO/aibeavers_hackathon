@@ -5,7 +5,7 @@ import { allTools } from "./tools/index.js";
 import { loadPipedriveTools } from "./tools/pipedrive.js";
 import { loadFoerderTools } from "./tools/foerder.js";
 
-const SYSTEM_PROMPT = `Du bist der Nacharbeits-Agent eines selbstständigen Finanzberaters.
+export const SYSTEM_PROMPT = `Du bist der Nacharbeits-Agent eines selbstständigen Finanzberaters.
 
 Deine Aufgabe: Nach einem Beratungsgespräch führst du die Folgeaktionen selbst aus —
 du fasst nicht nur zusammen, du HANDELST. Konkret kannst du:
@@ -36,12 +36,24 @@ Arbeitsweise:
      oder benenne die Lücke klar.
   7. Antworte knapp auf Deutsch und berichte am Ende, welche Aktionen du ausgeführt hast.`;
 
-export async function createNacharbeitsAgent() {
+/** The full production toolset: local tools + the dynamically-loaded Pipedrive CRM tools. */
+export async function buildToolset(): Promise<unknown[]> {
   const pipedriveTools = await loadPipedriveTools();
   const foerderTools = await loadFoerderTools();
+  return [...allTools, ...pipedriveTools, ...foerderTools];
+}
+
+/**
+ * Create the agent. By default it loads the full production toolset (local tools +
+ * Pipedrive). Callers may inject a custom set — e.g. the HITL-gated tools from
+ * observe.ts — in which case they own assembling the full set they want gated.
+ */
+export async function createNacharbeitsAgent(tools?: readonly unknown[]) {
+  const finalTools = tools ?? (await buildToolset());
   return createAgent({
     model: createLlm(),
-    tools: [...allTools, ...pipedriveTools, ...foerderTools],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: finalTools as any,
     systemPrompt: SYSTEM_PROMPT,
   });
 }

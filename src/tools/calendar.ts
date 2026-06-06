@@ -11,6 +11,7 @@ import ICAL from "ical.js";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { loadCaldavConfig } from "../config.js";
+import { loadBeraterConfig, hhmmToMinutes } from "../berater-config.js";
 
 /* ──────────────────────────────────────────────────────────────
  * CalDAV-Client (lazy, einmalig)
@@ -355,10 +356,16 @@ function toLocalIso(d: Date): string {
 
 export const findFreeSlotTool = tool(
   async ({ earliest_date, duration_min, business_start_hour, business_end_hour, search_days }) => {
-    const dur = (duration_min ?? 45) * 60_000;
-    const bStart = business_start_hour ?? 9;
-    const bEnd = business_end_hour ?? 17;
-    const days = search_days ?? 14;
+    // Arbeitszeiten & Präferenzen kommen aus der Berater-Config (berater-config.json),
+    // nicht aus Hardcodes. Tool-Argumente überschreiben die Config bei Bedarf.
+    const cfg = loadBeraterConfig();
+    const dur = (duration_min ?? cfg.standard_termin_dauer_min) * 60_000;
+    const raster = cfg.slot_raster_min * 60_000;
+    const days = search_days ?? cfg.suchfenster_tage;
+    const winStart =
+      business_start_hour != null ? business_start_hour * 60 : hhmmToMinutes(cfg.arbeitszeit.start);
+    const winEnd =
+      business_end_hour != null ? business_end_hour * 60 : hhmmToMinutes(cfg.arbeitszeit.ende);
 
     const from = new Date(earliest_date);
     if (Number.isNaN(from.getTime())) {
@@ -371,8 +378,9 @@ export const findFreeSlotTool = tool(
     for (let offset = 0; offset < days; offset++) {
       const day = new Date(from);
       day.setDate(from.getDate() + offset);
-      const dow = day.getDay();
-      if (dow === 0 || dow === 6) continue; // Wochenende überspringen
+      // ISO-Wochentag (1=Mo … 7=So) gegen die Arbeitstage des Beraters prüfen.
+      const isoDow = day.getDay() === 0 ? 7 : day.getDay();
+      if (!cfg.arbeitstage.includes(isoDow)) continue;
 
       const dayStart = new Date(day);
       dayStart.setHours(0, 0, 0, 0);
@@ -394,13 +402,21 @@ export const findFreeSlotTool = tool(
           // Unlesbares Objekt: lieber ignorieren als fälschlich blockieren.
         }
       }
+      // Mittagspause des Beraters wie einen belegten Termin behandeln.
+      if (cfg.mittagspause) {
+        const ls = new Date(day);
+        ls.setHours(0, hhmmToMinutes(cfg.mittagspause.start), 0, 0);
+        const le = new Date(day);
+        le.setHours(0, hhmmToMinutes(cfg.mittagspause.ende), 0, 0);
+        busy.push([ls.getTime(), le.getTime()]);
+      }
       busy.sort((a, b) => a[0] - b[0]);
 
-      // Bürozeiten in 15-Minuten-Schritten nach erster freier Lücke scannen.
+      // Arbeitszeit-Fenster im konfigurierten Raster nach erster freier Lücke scannen.
       const cursor = new Date(day);
-      cursor.setHours(bStart, 0, 0, 0);
+      cursor.setHours(0, winStart, 0, 0);
       const limit = new Date(day);
-      limit.setHours(bEnd, 0, 0, 0);
+      limit.setHours(0, winEnd, 0, 0);
 
       while (cursor.getTime() + dur <= limit.getTime()) {
         const slotStart = cursor.getTime();
@@ -410,42 +426,54 @@ export const findFreeSlotTool = tool(
           const s = new Date(slotStart);
           const e = new Date(slotEnd);
           return [
-            `Freier Slot gefunden:`,
+            `Freier Slot gefunden (Arbeitszeiten laut Berater-Config):`,
             `start: ${toLocalIso(s)}`,
             `end:   ${toLocalIso(e)}`,
-            `(${DATE_TIME_FMT.format(s)} → ${DATE_TIME_FMT.format(e)}, Europe/Berlin)`,
+            `(${DATE_TIME_FMT.format(s)} → ${DATE_TIME_FMT.format(e)}, ${cfg.zeitzone})`,
             `→ Lege den Termin mit genau diesen start/end-Werten via create_calendar_event an.`,
           ].join("\n");
         }
-        cursor.setTime(slotStart + 15 * 60_000);
+        cursor.setTime(slotStart + raster);
       }
     }
 
     return (
-      `Kein freier Slot von ${dur / 60_000} min in Bürozeiten (${bStart}–${bEnd} Uhr) ` +
-      `innerhalb der nächsten ${days} Werktage ab ${earliest_date} gefunden. ` +
+      `Kein freier Slot von ${dur / 60_000} min innerhalb der Arbeitszeit ` +
+      `(${cfg.arbeitszeit.start}–${cfg.arbeitszeit.ende}, Arbeitstage ${cfg.arbeitstage.join(",")}) ` +
+      `in den nächsten ${days} Tagen ab ${earliest_date} gefunden. ` +
       `Bitte Suchfenster erweitern oder Zeitraum anpassen.`
     );
   },
   {
     name: "find_free_slot",
     description:
-      "Findet den frühesten freien Termin-Slot im CalDAV-Kalender. Nutze dies, wenn " +
-      "ein Folgetermin nötig ist, aber im Gespräch KEIN festes Datum vereinbart wurde " +
-      "(Terminvorschlag): gib den frühesten Wunschtag (earliest_date) und die Dauer an, " +
-      "das Tool prüft die Verfügbarkeit und liefert einen garantiert kollisionsfreien " +
-      "Slot. Anschließend mit create_calendar_event anlegen und per send_email einladen.",
+      "Findet den frühesten freien Termin-Slot im CalDAV-Kalender unter Beachtung der " +
+      "Arbeitszeiten des Beraters (aus berater-config.json: Arbeitstage, Arbeitszeit, " +
+      "Mittagspause, Standard-Dauer). Nutze dies, wenn ein Folgetermin nötig ist, aber im " +
+      "Gespräch KEIN festes Datum vereinbart wurde (Terminvorschlag): gib nur den frühesten " +
+      "Wunschtag (earliest_date) an — Dauer/Fenster kommen aus der Config. Das Tool liefert " +
+      "einen garantiert kollisionsfreien Slot; anschließend mit create_calendar_event anlegen " +
+      "und per send_email einladen.",
     schema: z.object({
       earliest_date: z
         .string()
         .describe("Frühester Tag für den Termin, ISO-8601 (z.B. 2026-06-13 oder 2026-06-13T00:00:00)"),
-      duration_min: z.number().optional().describe("Dauer in Minuten (Default 45)"),
-      business_start_hour: z.number().optional().describe("Frühester Beginn, Stunde (Default 9)"),
-      business_end_hour: z.number().optional().describe("Spätestes Ende, Stunde (Default 17)"),
+      duration_min: z
+        .number()
+        .optional()
+        .describe("Dauer in Minuten. Optional — Default aus der Berater-Config."),
+      business_start_hour: z
+        .number()
+        .optional()
+        .describe("Override: frühester Beginn als Stunde. Optional — sonst Arbeitszeit aus Config."),
+      business_end_hour: z
+        .number()
+        .optional()
+        .describe("Override: spätestes Ende als Stunde. Optional — sonst Arbeitszeit aus Config."),
       search_days: z
         .number()
         .optional()
-        .describe("Wie viele Tage ab earliest_date durchsucht werden (Default 14)"),
+        .describe("Wie viele Tage ab earliest_date durchsucht werden. Optional — Default aus Config."),
     }),
   }
 );
