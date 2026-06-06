@@ -47,4 +47,8 @@ export interface CrmExecutionInfo {
 
 export interface ActionExecutionInfo {
   status: "pending" | "success" | "mocked" | "error";
+  /** true nur bei echtem Live-Versand (status 'success' MIT external_id). */
+  isLive?: boolean;
+  /** Message-ID o.ä. des realen Versands (nur bei Live). */
+  externalId?: string;
 }
