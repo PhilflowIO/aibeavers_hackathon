@@ -1,0 +1,11 @@
+{
+  "_hinweis": "Arbeitszeiten & Termin-Präferenzen des Beraters. find_free_slot nutzt diese Werte als Default, wenn ein Folgetermin-Slot gesucht wird. arbeitstage: 1=Montag … 7=Sonntag (ISO-8601). Zeiten als HH:MM in der angegebenen zeitzone. mittagspause kann null sein (keine Pause).",
+  "name": "Berater (Demo)",
+  "zeitzone": "Europe/Berlin",
+  "arbeitstage": [1, 2, 3, 4, 5],
+  "arbeitszeit": { "start": "09:00", "ende": "17:00" },
+  "mittagspause": { "start": "12:30", "ende": "13:30" },
+  "standard_termin_dauer_min": 45,
+  "slot_raster_min": 15,
+  "suchfenster_tage": 14
+}
