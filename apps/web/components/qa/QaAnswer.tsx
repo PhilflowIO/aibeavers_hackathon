@@ -19,19 +19,17 @@ export function QaAnswer({ response, meetings }: QaAnswerProps) {
   return (
     <article
       className={[
-        "rounded-lg border p-4",
+        "qa-answer rounded-xl border p-4",
         gedeckt
-          ? "border-zinc-800 bg-zinc-950"
-          : "border-amber-300 bg-amber-50",
+          ? "border-border-subtle bg-canvas-raised/50"
+          : "border-warn/30 bg-warn-muted",
       ].join(" ")}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span
           className={[
-            "rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-            gedeckt
-              ? "bg-emerald-500/15 text-emerald-700"
-              : "bg-amber-500/15 text-amber-800",
+            "rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+            gedeckt ? "bg-sage-muted text-sage" : "bg-warn-muted text-warn",
           ].join(" ")}
         >
           {gedeckt ? "Gedeckt" : "Nicht gedeckt"}
@@ -39,22 +37,23 @@ export function QaAnswer({ response, meetings }: QaAnswerProps) {
         {!gedeckt && <RefusalBadge />}
       </div>
 
-      <p className="mb-3 text-sm leading-relaxed text-zinc-100">{antwort}</p>
+      <p className="mb-4 text-sm leading-relaxed text-ink">{antwort}</p>
 
       {gedeckt && belege.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {belege.map((beleg) => (
-            <QuoteChip
-              key={`${beleg.meeting_id}-${beleg.start_sec}`}
-              beleg={beleg}
-              speaker={getSpeakerAtBeleg(
-                meetings,
-                beleg.meeting_id,
-                beleg.start_sec,
-              )}
-              onJump={jumpTo}
-            />
-          ))}
+        <div className="mb-4">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-ink-faint">
+            Quellen
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {belege.map((beleg) => (
+              <QuoteChip
+                key={`${beleg.meeting_id}-${beleg.start_sec}`}
+                beleg={beleg}
+                speaker={getSpeakerAtBeleg(meetings, beleg.meeting_id, beleg.start_sec)}
+                onJump={jumpTo}
+              />
+            ))}
+          </div>
         </div>
       )}
 

@@ -11,17 +11,26 @@ interface QuoteChipProps {
 
 export function QuoteChip({ beleg, speaker, onJump }: QuoteChipProps) {
   const label = speaker
-    ? `${formatSec(beleg.start_sec)} ${speaker}`
+    ? `${formatSec(beleg.start_sec)} · ${speaker}`
     : formatSec(beleg.start_sec);
 
   return (
     <button
       type="button"
       onClick={() => onJump(beleg.meeting_id, beleg.start_sec)}
-      className="inline-flex items-center rounded-full border border-sky-300 bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800 transition hover:border-sky-400 hover:bg-sky-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
-      title={`Zur Stelle in ${beleg.meeting_id} springen`}
+      className="chip-beleg gap-1"
+      title={`Zur Stelle in ${beleg.meeting_id} bei ${formatSec(beleg.start_sec)} springen`}
     >
-      {label}
+      <span>{label}</span>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-70" aria-hidden>
+        <path
+          d="M2 5h6M6 2l3 3-3 3"
+          stroke="currentColor"
+          strokeWidth="1.25"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
     </button>
   );
 }

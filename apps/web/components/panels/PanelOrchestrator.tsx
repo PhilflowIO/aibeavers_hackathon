@@ -2,8 +2,8 @@
 
 import type { DemoState } from "../../lib/demo-state";
 import type {
-  AnalyseResult,
   ActionExecutionInfo,
+  AnalyseResult,
   CrmExecutionInfo,
   Meeting,
   QaResult,
@@ -51,11 +51,7 @@ export function PanelOrchestrator({
   }
 
   if (!analysis) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-        Keine Analysedaten geladen.
-      </div>
-    );
+    return <div className="empty-state">Keine Analysedaten geladen.</div>;
   }
 
   switch (state) {
@@ -111,11 +107,34 @@ function IdlePanel({ state }: { state: DemoState }) {
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900/30 p-8 text-center">
+    <div className="idle-hero flex h-full flex-col items-center justify-center text-center">
       {state !== "idle" && (
-        <span className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-sky-500/30 border-t-sky-400" />
+        <span className="relative z-10 mb-5 h-9 w-9 animate-spin rounded-full border-2 border-brass/25 border-t-brass" />
       )}
-      <p className="max-w-sm text-sm text-zinc-400">{messages[state] ?? ""}</p>
+      {state === "idle" && (
+        <span
+          className="relative z-10 mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-brass-glow bg-brass-muted text-brass"
+          aria-hidden
+        >
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+            <path
+              d="M6 3h7l4 4v12H6V3z"
+              stroke="currentColor"
+              strokeWidth="1.25"
+              strokeLinejoin="round"
+            />
+            <path d="M13 3v4h4M8 11h6M8 14.5h4" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+          </svg>
+        </span>
+      )}
+      <p className="relative z-10 max-w-sm font-display text-base text-ink-muted">
+        {messages[state] ?? ""}
+      </p>
+      {state === "idle" && (
+        <p className="relative z-10 mt-2 text-xs text-ink-faint">
+          Plan-Checkliste links · Panels erscheinen nacheinander
+        </p>
+      )}
     </div>
   );
 }
@@ -134,33 +153,33 @@ function DemoQaSection({
   isLoading: boolean;
 }) {
   return (
-    <article className="flex h-full flex-col gap-4">
-      <header>
-        <h2 className="text-lg font-semibold text-zinc-50">Talk to your calls</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Cross-Call Q&A mit Quellenbelegen und Voice
-        </p>
+    <article className="flex h-full flex-col gap-4 overflow-y-auto">
+      <header className="panel-heading">
+        <h2 className="panel-heading-title">Fragen ans Gesprächsarchiv</h2>
+        <p className="panel-heading-sub">Cross-Call Q&A mit Quellenbelegen und Voice</p>
       </header>
 
-      {(state === "qa_ready" || state === "qa_loading") && (
+      {state === "complete" && (
+        <div className="rounded-lg border border-sage/30 bg-sage-muted px-4 py-3 text-sm text-sage">
+          Demo abgeschlossen — Agent hat Nacharbeit ausgeführt und Fragen beantwortet.
+        </div>
+      )}
+
+      {(state === "qa_ready" || state === "qa_loading" || state === "complete") && (
         <QaInput onAsk={onRunQa} loading={isLoading} />
       )}
 
       {isLoading && (
-        <div className="flex items-center gap-3 text-sm text-zinc-400">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-400" />
-          Antwort wird generiert…
+        <div className="qa-skeleton space-y-3 rounded-xl border border-border-subtle bg-canvas-raised/30 p-4">
+          <div className="h-3 w-24 animate-pulse rounded bg-border-subtle" />
+          <div className="h-4 w-full animate-pulse rounded bg-border-subtle" />
+          <div className="h-4 w-5/6 animate-pulse rounded bg-border-subtle" />
+          <p className="text-xs text-ink-faint">Antwort wird aus dem Transkript generiert…</p>
         </div>
       )}
 
       {qaResult && !isLoading && (
         <QaAnswer response={qaResult} meetings={meetings} />
-      )}
-
-      {state === "complete" && (
-        <p className="text-xs text-emerald-500/90">
-          ✓ Demo abgeschlossen — Agent hat Nacharbeit ausgeführt und beantwortet.
-        </p>
       )}
     </article>
   );

@@ -17,40 +17,44 @@ export function HeroMailToast({
 }: HeroMailToastProps) {
   if (!visible) return null;
 
-  const tone = isLive
-    ? "border-emerald-200 shadow-emerald-900/10"
-    : "border-zinc-300 shadow-zinc-900/10";
-  const iconTone = isLive
-    ? "bg-emerald-100 text-emerald-700"
-    : "bg-zinc-200 text-zinc-600";
-  const titleTone = isLive ? "text-emerald-800" : "text-zinc-700";
   const title = isLive
     ? "Kalendereinladung versendet"
     : "Kalendereinladung vorbereitet (Demo)";
 
   return (
     <div
-      className={`pointer-events-auto fixed bottom-6 right-6 z-50 max-w-sm animate-slide-up rounded-xl border bg-white p-4 shadow-2xl ${tone}`}
+      className={`pointer-events-auto fixed bottom-6 right-6 z-50 max-w-sm animate-slide-up rounded-xl border bg-canvas-raised p-4 ${
+        isLive ? "border-sage/30" : "border-border-subtle"
+      }`}
+      style={{ boxShadow: "var(--shadow-toast)" }}
       role="status"
+      aria-live="polite"
     >
       <div className="flex items-start gap-3">
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg ${iconTone}`}>
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base ${
+            isLive ? "bg-sage-muted text-sage" : "bg-canvas-surface text-ink-muted"
+          }`}
+          aria-hidden
+        >
           ✉
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className={`text-sm font-semibold ${titleTone}`}>{title}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className={`text-sm font-semibold ${isLive ? "text-sage" : "text-ink-muted"}`}>
+              {title}
+            </p>
             {!isLive && (
-              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+              <span className="rounded-full border border-border-subtle bg-canvas-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-faint">
                 Mock
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-zinc-400">
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
             Folgetermin Berger — ESG + Wohn-Riester · thomas.berger@example.com
           </p>
           {isLive && externalId && (
-            <p className="mt-0.5 truncate text-[10px] text-zinc-400">
+            <p className="mt-1 truncate font-mono text-[10px] text-ink-faint">
               Message-ID: {externalId}
             </p>
           )}
@@ -59,10 +63,17 @@ export function HeroMailToast({
           <button
             type="button"
             onClick={onDismiss}
-            className="shrink-0 text-zinc-500 hover:text-zinc-200"
+            className="interactive-focus shrink-0 rounded-md p-1.5 text-ink-faint transition-colors hover:bg-canvas-surface hover:text-ink-muted"
             aria-label="Schließen"
           >
-            ×
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path
+                d="M3 3l8 8M11 3l-8 8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </button>
         )}
       </div>

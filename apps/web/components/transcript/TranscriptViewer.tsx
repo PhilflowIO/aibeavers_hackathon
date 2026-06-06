@@ -14,20 +14,28 @@ export function TranscriptViewer({ meetings }: TranscriptViewerProps) {
 
   if (!meeting) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-500">
+      <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border p-6 text-sm text-ink-faint">
         Kein Transkript für diesen Termin.
       </div>
     );
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-2">
-      <header className="shrink-0 px-1">
-        <h3 className="text-sm font-medium text-zinc-200">{meeting.titel}</h3>
-        <p className="text-xs text-zinc-500">{meeting.datum}</p>
+    <section className="flex min-h-0 flex-1 flex-col gap-3">
+      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-2 px-1">
+        <div>
+          <h3 className="font-display text-base text-ink">{meeting.titel}</h3>
+          <p className="text-xs text-ink-faint">{meeting.datum}</p>
+        </div>
+        <p className="text-[10px] text-ink-faint">
+          {meeting.segments.length} Segmente · Klick auf Beleg-Chip springt hierher
+        </p>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 px-3">
-        <div className="flex flex-col">
+      <div
+        id="transcript-scroll"
+        className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border-subtle bg-canvas/40 p-2"
+      >
+        <div className="flex flex-col gap-2">
           {meeting.segments.map((segment, index) => {
             const highlighted =
               highlightSec !== null &&

@@ -25,34 +25,52 @@ export function DemoClient() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 p-6 text-red-800">
-        {loadError}
+      <main className="demo-grain flex min-h-screen items-center justify-center p-6">
+        <p className="rounded-lg border border-danger-border bg-danger-muted px-5 py-4 text-sm text-danger">
+          {loadError}
+        </p>
       </main>
     );
   }
 
   if (!transcript) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-sky-500/30 border-t-sky-400" />
+      <main className="demo-grain flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+        <span
+          className="h-8 w-8 animate-spin rounded-full border-2 border-brass/25 border-t-brass"
+          aria-hidden
+        />
+        <p className="text-sm text-ink-faint" aria-live="polite">
+          Transkript wird geladen…
+        </p>
       </main>
     );
   }
 
   return (
     <BelegJumpController meetings={transcript.meetings}>
-      <div className="flex min-h-screen flex-col bg-zinc-950">
+      <div className="demo-grain flex min-h-screen flex-col">
         <AppShell transcript={transcript} />
 
-        <section className="border-t border-zinc-800 px-6 pb-6">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500">
-              Gesprächstranskript · {transcript.kunde}
-            </h2>
-            <MeetingTabs meetings={transcript.meetings} />
-          </div>
-          <div className="h-64 rounded-xl border border-zinc-800 bg-zinc-900/20 p-3">
-            <TranscriptViewer meetings={transcript.meetings} />
+        <section className="border-t border-border-subtle bg-canvas/50 px-6 pb-8 pt-6 lg:px-8">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
+                  Quellenbeleg
+                </p>
+                <h2 className="mt-1 font-display text-lg text-ink">
+                  Gesprächstranskript · {transcript.kunde}
+                </h2>
+                <p className="mt-1 text-xs text-ink-faint">
+                  Beleg-Chips in den Panels springen zur markierten Stelle
+                </p>
+              </div>
+              <MeetingTabs meetings={transcript.meetings} />
+            </div>
+            <div className="panel-surface h-72 p-4 lg:h-80">
+              <TranscriptViewer meetings={transcript.meetings} />
+            </div>
           </div>
         </section>
       </div>

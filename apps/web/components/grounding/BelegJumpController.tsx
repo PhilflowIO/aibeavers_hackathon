@@ -90,9 +90,24 @@ export function BelegJumpController({
     if (!jumpTarget) return;
 
     const key = `${jumpTarget.meeting_id}:${jumpTarget.segmentIndex}`;
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const scroll = () => {
       const node = segmentRefs.current.get(key);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+      node?.scrollIntoView({
+        behavior: reducedMotion ? "auto" : "smooth",
+        block: "center",
+      });
+      const container = document.getElementById("transcript-scroll");
+      if (container && node) {
+        const nodeTop = node.offsetTop - container.offsetTop;
+        container.scrollTo({
+          top: nodeTop - container.clientHeight / 3,
+          behavior: reducedMotion ? "auto" : "smooth",
+        });
+      }
     };
 
     requestAnimationFrame(() => {
