@@ -1,0 +1,19 @@
+# Data is never committed — fetched live via fetch_data.sh / re-ingested
+data/
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Build / runtime artifacts
+*.duckdb
+qdrant_storage/
+.hf_cache/
