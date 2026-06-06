@@ -112,7 +112,23 @@ function buildIcs(args: BuildIcsArgs): string {
   if (error || !value) {
     throw new Error(`ICS-Erzeugung fehlgeschlagen: ${error?.message ?? "?"}`);
   }
-  return value;
+  return toStoredCalendarObject(value);
+}
+
+/**
+ * Macht aus dem ics-Output ein RFC-4791-konformes CalDAV-Speicherobjekt.
+ *
+ * Die ics-Library setzt per Default `METHOD:PUBLISH` (+ `X-PUBLISHED-TTL`).
+ * Ein auf dem CalDAV-Server gespeichertes Objekt darf laut RFC 4791 §4.1
+ * KEIN METHOD tragen (das gehört ausschließlich in iTIP/iMIP-Nachrichten) —
+ * SabreDAV/Baikal lehnt es sonst mit HTTP 415 ab. Für den E-Mail-Versand
+ * setzt send_email die Transport-Form (METHOD:REQUEST) separat.
+ */
+function toStoredCalendarObject(ics: string): string {
+  return ics
+    .split(/\r?\n/)
+    .filter((line) => !/^(METHOD|X-PUBLISHED-TTL):/i.test(line))
+    .join("\r\n");
 }
 
 /* ──────────────────────────────────────────────────────────────
