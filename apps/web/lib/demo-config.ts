@@ -7,5 +7,7 @@
  * (which sends kunde_email) and the server route (the live allowlist) — set it
  * BEFORE `pnpm dev:web` / `pnpm build:web`.
  */
+const configuredRecipient = process.env.NEXT_PUBLIC_DEMO_RECIPIENT_EMAIL?.trim();
+
 export const DEMO_RECIPIENT_EMAIL =
-  process.env.NEXT_PUBLIC_DEMO_RECIPIENT_EMAIL ?? "thomas.berger@example.com";
+  configuredRecipient || "thomas.berger@example.com";

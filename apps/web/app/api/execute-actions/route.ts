@@ -19,6 +19,9 @@ const requestSchema = z.object({
   actions: z.array(actionSchema),
 });
 
+// Name bleibt bewusst fix (Demo-Fixture ist immer Berger); nur die Empfänger-
+// Adresse ist via NEXT_PUBLIC_DEMO_RECIPIENT_EMAIL konfigurierbar, damit die echte
+// Einladung an ein zeigbares Postfach gehen kann.
 const DEMO_KUNDE = "Thomas Berger";
 const DEMO_KUNDE_EMAIL = DEMO_RECIPIENT_EMAIL;
 
