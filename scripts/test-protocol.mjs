@@ -169,7 +169,9 @@ async function main() {
   // HITL approval bookkeeping (timestamps, not log indices).
   let awaitingApprovalAt = -1; // recvAt of the awaiting_approval frame
   let approveResolvedAt = -1; // recvAt when POST /approve returned
+  let approveStatus = -1;
   let approveTriggered = false;
+  let approveTask = null;
 
   // Transport-contract tracking.
   let namedEventSeen = null; // first "event:" name seen (contract violation)
@@ -265,24 +267,32 @@ async function main() {
         ) {
           approveTriggered = true;
           awaitingApprovalAt = recvAt;
-          // Control: do NOT approve yet. Pause and assert the server has not
-          // advanced the gated action (no executing/done) without /approve.
-          await new Promise((r) => setTimeout(r, WITHHOLD_WINDOW_MS));
-          const leakedDuringWithhold =
-            statusOrder.get("create_calendar_event")?.some((s) => s === "executing" || s === "done") ?? false;
-          log.push({
-            t: stamp(),
-            kind: `withhold-window ${WITHHOLD_WINDOW_MS}ms passed leaked=${leakedDuringWithhold}`,
+          // Control: do NOT approve yet. Keep reading the SSE stream while a
+          // delayed task watches for leaked executing/done frames, then grants.
+          // Blocking this loop would let leaked frames buffer unread and receive
+          // misleading post-approval timestamps.
+          approveTask = (async () => {
+            await new Promise((r) => setTimeout(r, WITHHOLD_WINDOW_MS));
+            const leakedDuringWithhold =
+              statusOrder.get("create_calendar_event")?.some((s) => s === "executing" || s === "done") ?? false;
+            log.push({
+              t: stamp(),
+              kind: `withhold-window ${WITHHOLD_WINDOW_MS}ms passed leaked=${leakedDuringWithhold}`,
+            });
+            // Now grant; record when the /approve response returns.
+            const r = await postJson("/approve", { id: a.id, decision: "granted" });
+            approveResolvedAt = r.recvAt;
+            approveStatus = r.status;
+            log.push({
+              t: stamp(),
+              kind: `POST /approve id=${a.id} granted -> ${r.status} ${r.text}`,
+            });
+            // Stash the control result for check [3].
+            statusOrder.set("__withhold_leaked__", [String(leakedDuringWithhold)]);
+          })().catch((e) => {
+            log.push({ t: stamp(), kind: `ERROR /approve: ${e.message}` });
+            statusOrder.set("__withhold_leaked__", ["true"]);
           });
-          // Now grant; record when the /approve response returns.
-          const r = await postJson("/approve", { id: a.id, decision: "granted" });
-          approveResolvedAt = r.recvAt;
-          log.push({
-            t: stamp(),
-            kind: `POST /approve id=${a.id} granted -> ${r.status} ${r.text}`,
-          });
-          // Stash the control result for check [3].
-          statusOrder.set("__withhold_leaked__", [String(leakedDuringWithhold)]);
         }
       } else if (msg.kind === "answer") {
         answerText = msg.text;
@@ -308,6 +318,7 @@ async function main() {
     clearTimeout(hardTimer);
     ac.abort();
   }
+  if (approveTask) await approveTask;
 
   // ---- determine target identity & inconclusive conditions ------------------
   // We recognize the MOCK server by the presence of its demo-only tool names.
@@ -385,7 +396,7 @@ async function main() {
     const doneAt = actionRecvAt.get("create_calendar_event|done") ?? -1;
     // The gate must block: executing/done must arrive AFTER /approve resolved.
     const afterApprove =
-      approveResolvedAt >= 0 && execAt > approveResolvedAt && doneAt > approveResolvedAt;
+      approveStatus === 200 && approveResolvedAt >= 0 && execAt > approveResolvedAt && doneAt > approveResolvedAt;
     // The withheld-approval control: nothing leaked during the withhold window.
     const leaked = (statusOrder.get("__withhold_leaked__")?.[0] ?? "false") === "true";
     let status;
@@ -394,7 +405,7 @@ async function main() {
     add(
       "[3] calendar gate blocks: executing/done only after /approve returns",
       status,
-      `seq=[${seq.join(",")}] approveResolvedAt=${approveResolvedAt.toFixed(0)} ` +
+      `seq=[${seq.join(",")}] approve=${approveStatus} approveResolvedAt=${approveResolvedAt.toFixed(0)} ` +
         `execAt=${execAt.toFixed(0)} doneAt=${doneAt.toFixed(0)} leakedDuringWithhold=${leaked}`
     );
   }

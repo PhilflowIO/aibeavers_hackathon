@@ -42,7 +42,9 @@ const HOST = "127.0.0.1";
 
 // Headless-testing env toggles.
 const MOCK_AUTORUN = process.env.MOCK_AUTORUN === "1";
-const MOCK_AUTOAPPROVE = process.env.MOCK_AUTOAPPROVE; // "granted" | "denied" | undefined
+const RAW_MOCK_AUTOAPPROVE = process.env.MOCK_AUTOAPPROVE;
+const MOCK_AUTOAPPROVE =
+  RAW_MOCK_AUTOAPPROVE === "1" ? "granted" : RAW_MOCK_AUTOAPPROVE; // "granted" | "denied" | undefined
 
 // Canonical "Nacharbeit starten" instruction (verbatim).
 const CANONICAL_INSTRUCTION =

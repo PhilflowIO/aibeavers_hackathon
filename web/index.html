@@ -9,7 +9,7 @@
       - Fully data-driven architecture: ONE render(state) path; live SSE and the
         ~1.5s fallback flow through the same builder; merge-on-upsert; real
         connection-down visual state (.live[data-conn="down"]); robust SSE-drop
-        re-hydration from the next snapshot.
+        reconnect state.
       - Warm editorial palette + tokens (--ink/--paper/--accent #e8410f), --serif
         display font; sticky .topbar; full .hero (kicker, big serif <h1> with <em>
         accent, .lede, italic .tagline blockquote); .statstrip (3 stats);
@@ -36,11 +36,11 @@
       - Executing indeterminate .progress bar.
 
     GRAFTED FROM CANDIDATE C (honesty core + a11y hardening — highest priority):
-      - resolveVisual(a): a SINGLE guard that early-returns the amber "stub /
-        Vorschau" visual whenever a.real!==true, BEFORE any status branch. Green
-        "echt" is therefore structurally reachable ONLY through the
-        real===true && status==='done' branch — the sacred invariant is
-        unbypassable, not convention-enforced.
+      - resolveVisual(a): denied/error terminal states win first; otherwise
+        a.real!==true early-returns the amber "stub / Vorschau" visual before
+        any green status branch. Green "echt" is therefore structurally
+        reachable ONLY through the real===true && status==='done' branch —
+        the sacred invariant is unbypassable, not convention-enforced.
       - Contrast-hardened tokens: light --warn:#8a5200, dark --ink-2:#cbcfdb
         (both verified >=4.5:1 for tag-warn text on --warn-bg, dim text on paper).
       - Live status pill min-height:44px (>=44px target), with B's data-conn
@@ -51,7 +51,7 @@
         explicit per-element kill list — nothing animates.
       - .btn[disabled] sets pointer-events:none + opacity (visible & blocked) in
         addition to the element.disabled property.
-      - After fallback/snapshot render, focus moves once to the awaiting node's
+      - After fallback/live render, focus moves once to the awaiting node's
         Freigeben button (rerender(focusId)) so keyboard users land on the decision.
 
   Donor's dark-blue (#0a0f1c) / philflow-blue (#4f8cff) theme and "M. Hofmann"
@@ -59,8 +59,10 @@
 
   HONESTY MODEL (SACRED — enforced in markup AND JS via resolveVisual()):
     green ✓ "echt"   -> ONLY real===true && status==="done"
-    real===false     -> amber "Vorschau · nächste Integration", terminal,
-                        NEVER a green check, never a spine "done" glow
+    status denied/error -> terminal warning states, never preview, never green
+    real===false     -> amber "Vorschau · nächste Integration" unless an
+                        explicit denied/error status exists; NEVER a green
+                        check, never a spine "done" glow
     Color is never the sole signal — every status pairs color + icon + text.
     lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
 
@@ -476,7 +478,7 @@
     font-weight:800; font-size:.92rem; display:flex; align-items:center; gap:9px;
   }
   .decision svg{ width:18px; height:18px; flex:0 0 auto; }
-  .decision.denied{ color:var(--warn); border-top-color:var(--warn-line); }
+  .decision.denied, .decision.error{ color:var(--warn); border-top-color:var(--warn-line); }
   .decision.granted{ color:var(--ok); }
 
   /* fallback dimming until live arrives */
@@ -559,9 +561,9 @@
       </span>
     </div>
     <span class="spacer"></span>
-    <span class="live" id="conn" data-conn="up" role="status" aria-live="polite">
+    <span class="live" id="conn" data-conn="down" role="status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span>
-      <span id="connText">Live verbunden</span>
+      <span id="connText">Verbindung …</span>
     </span>
   </div>
 </header>
@@ -670,9 +672,10 @@
      ONE render(state) builds every node from data — live SSE and the ~1.5s
      fallback share exactly this code path. State is a Map keyed by action_id.
      The honesty invariant is enforced by resolveVisual() (grafted from C):
-     a single guard that early-returns the amber "stub" visual whenever
-     real!==true, BEFORE any status branch. The green "echt" visual is therefore
-     structurally reachable ONLY through real===true && status==='done'.
+     denied/error terminal states win before preview; otherwise real!==true
+     early-returns the amber "stub" visual before any green status branch. The
+     green "echt" visual is structurally reachable ONLY through
+     real===true && status==='done'.
      ========================================================================= */
 
   var MODEL = "qwen-7b@eu-vllm";
@@ -689,6 +692,30 @@
   var answerWrap = document.getElementById("answerWrap");
   var answerBody = document.getElementById("answerBody");
 
+  function readUiToken(){
+    try{
+      var params = new URLSearchParams(window.location.search || "");
+      var fromUrl = params.get("ui_token");
+      if(fromUrl){
+        window.sessionStorage.setItem("nacharbeit_ui_token", fromUrl);
+        params.delete("ui_token");
+        var qs = params.toString();
+        var next = window.location.pathname + (qs ? "?"+qs : "") + window.location.hash;
+        window.history.replaceState(null, "", next);
+        return fromUrl;
+      }
+      return window.sessionStorage.getItem("nacharbeit_ui_token") ||
+             window.localStorage.getItem("nacharbeit_ui_token") || "";
+    }catch(e){ return ""; }
+  }
+
+  function jsonHeaders(){
+    var headers = {"Content-Type":"application/json"};
+    var token = readUiToken();
+    if(token) headers["x-ui-token"] = token;
+    return headers;
+  }
+
   /* Show the agent's final answer (or an error) in the editorial answer panel.
      textContent only — never innerHTML — so stream text cannot inject markup. */
   function showAnswer(text, isError){
@@ -701,6 +728,7 @@
   var order = [];          // preserves arrival order for stable spine
   var liveReceived = false;
   var isFallback = false;
+  var runActive = false;
 
   /* ----- dedicated sr-only aria-live region for HITL outcomes (from C) ----- */
   var srRegion = document.createElement("div");
@@ -743,12 +771,20 @@
 
   /* =========================================================================
      THE HONESTY GUARD — single source of truth for a node's rendered visual.
-     EARLY-RETURN (from C): real!==true is forced to terminal amber "Vorschau"
-     BEFORE any status branch is consulted. No caller can produce a green/done
-     visual for a non-real action; status==='done' without real===true never
-     reaches the 'done' branch. This makes the sacred invariant unbypassable.
+     Terminal denied/error statuses win first so backend failure/refusal events
+     are never mislabeled as generic preview. Then real!==true is forced to
+     terminal amber "Vorschau" BEFORE done/executing branches are consulted.
+     No caller can produce a green/done visual for a non-real action;
+     status==='done' without real===true never reaches the 'done' branch.
+     This makes the sacred invariant unbypassable.
      ========================================================================= */
   function resolveVisual(a){
+    if(a.status === "denied" || a.approval === "denied")
+      return { node:"stub", tag:"tag-warn", tagIcon:ic("cross"),
+               tagText:"abgelehnt", kind:"denied" };
+    if(a.status === "error")
+      return { node:"stub", tag:"tag-warn", tagIcon:ic("cross"),
+               tagText:"Fehler", kind:"error" };
     if(a.real !== true){
       // ANY non-real action -> terminal amber, regardless of status.
       return { node:"stub", tag:"tag-warn", tagIcon:ic("eye"),
@@ -763,9 +799,6 @@
     if(a.status === "awaiting_approval" && a.approval == null)
       return { node:"hitl flow", tag:"tag-wait", tagIcon:ic("clock"),
                tagText:"Freigabe nötig", kind:"hitl" };
-    if(a.approval === "denied")
-      return { node:"", tag:"tag-warn", tagIcon:ic("cross"),
-               tagText:"abgelehnt", kind:"denied" };
     // pending / unknown real action
     return { node:"", tag:"tag-wait", tagIcon:ic("clock"),
              tagText:"in Arbeit", kind:"pending" };
@@ -777,7 +810,7 @@
   function markerIconOf(kind, tool){
     if(kind === "done")   return ic("check");
     if(kind === "exec")   return ic("spinner");
-    if(kind === "denied") return ic("cross");
+    if(kind === "denied" || kind === "error") return ic("cross");
     return ic(TOOL_ICON[tool] || "chip");
   }
 
@@ -836,12 +869,14 @@
         '</div>';
     } else if(v.kind === "denied"){
       hitlHtml = '<div class="decision denied">'+ic("cross")+'Abgelehnt – keine Ausführung. Kein Schreibzugriff erfolgt.</div>';
+    } else if(v.kind === "error"){
+      hitlHtml = '<div class="decision error">'+ic("cross")+'Fehler – Ausführung nicht abgeschlossen. Bitte Detail prüfen.</div>';
     } else if(a.real === true && (v.kind === "exec" || v.kind === "pending") && a.approval === "granted" && a.status !== "done"){
       // granted but stream has not advanced to done -> pending line, NO green check.
       // HARDENED: gated on real===true AND v.kind (exec/pending) so a hostile/buggy
-      // snapshot ({real:false,...}) can never render the green check glyph here.
+      // stream event ({real:false,...}) can never render the green check glyph here.
       // This keeps the invariant ('green check ONLY for real===true && status==="done"')
-      // unbypassable even via an untrusted SSE snapshot — not just the grant() click path.
+      // unbypassable even via an untrusted SSE event — not just the grant() click path.
       hitlHtml = '<div class="decision granted">'+ic("check")+'Freigegeben – Ausführung läuft …</div>';
     }
 
@@ -852,6 +887,7 @@
     if(v.kind === "exec")   footMeta = '<span class="sep">·</span><span>HITL freigegeben</span>';
     if(v.kind === "stub")   footMeta = '<span class="sep">·</span><span>kein echter Schreibzugriff</span>';
     if(v.kind === "denied") footMeta = '<span class="sep">·</span><span>vom Menschen gestoppt</span>';
+    if(v.kind === "error")  footMeta = '<span class="sep">·</span><span>Ausführung fehlgeschlagen</span>';
     if(a.hitl_note)         footMeta = '<span class="sep">·</span><span>'+esc(a.hitl_note)+'</span>';
 
     li.innerHTML =
@@ -928,7 +964,7 @@
     state.set(a.action_id, Object.assign({}, state.get(a.action_id)||{}, a));
   }
 
-  /* ----- wholesale re-hydrate (event "snapshot") ----- */
+  /* ----- wholesale re-hydrate for local fallback arrays ----- */
   function hydrate(arr){
     if(!Array.isArray(arr)) return;
     state = new Map();
@@ -936,25 +972,39 @@
     arr.forEach(upsert);
   }
 
+  /* ----- clear baked fallback rows before a live run/action stream takes over ----- */
+  function resetLiveRun(){
+    state = new Map();
+    order = [];
+    isFallback = false;
+    runActive = true;
+    fbNote.classList.remove("show");
+    listEl.classList.remove("fallback");
+  }
+
   /* =========================================================================
-     HITL — POST decision; NO optimistic green. Buttons disabled on click.
-     grant -> mark approval='granted' ONLY (status untouched); the
-     executing->done transition comes from the SSE stream, never the click.
-     deny -> terminal locally.
+     HITL — POST decision; NO optimistic green or local decision truth.
+     grant -> after /approve success, mark approval='granted' ONLY (status
+     untouched); executing->done still comes from the SSE stream, never click.
+     deny -> terminal locally only after /approve success.
      ========================================================================= */
   function postDecision(id, decision){
     return fetch("/approve", {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:jsonHeaders(),
       body: JSON.stringify({id: id, decision: decision})
-    }).catch(function(){ /* offline demo: state still advances locally below */ });
+    }).then(function(response){
+      if(!response.ok) throw new Error("approve status "+response.status);
+      return response;
+    });
   }
 
-  function disableHitlButtons(node){
+  function setHitlButtonsDisabled(node, disabled){
     if(!node) return;
     node.querySelectorAll("button[data-approve],button[data-deny]").forEach(function(b){
-      b.disabled = true;                 // B: element.disabled property
-      b.setAttribute("disabled","disabled"); // C: attribute for [disabled] CSS (pointer-events/opacity)
+      b.disabled = disabled;                 // B: element.disabled property
+      if(disabled) b.setAttribute("disabled","disabled"); // C: attribute for [disabled] CSS
+      else b.removeAttribute("disabled");
     });
   }
 
@@ -962,26 +1012,38 @@
     var a = state.get(id);
     if(!a || a.real !== true) return;    // honesty: only real actions can be granted
     var node = document.getElementById("row-"+id);
-    disableHitlButtons(node);
-    postDecision(id, "granted");
-    // INTENTIONAL: mark approval ONLY — do NOT set a.status='executing'.
-    // The awaiting->executing->done progression belongs to the SSE stream; the
-    // click only records the human's decision. Only an SSE 'done' (real===true)
-    // can produce the green "echt" check. Renders B's "Freigegeben …" line.
-    a.approval = "granted";
-    render();
-    announce("Freigegeben. Aktion wird ausgeführt – warte auf Bestätigung des Streams.");
+    setHitlButtonsDisabled(node, true);
+    postDecision(id, "granted").then(function(){
+      var current = state.get(id);
+      if(!current || current.real !== true) return;
+      // INTENTIONAL: mark approval ONLY — do NOT set current.status='executing'.
+      // The awaiting->executing->done progression belongs to the SSE stream; the
+      // click only records the backend-accepted human decision. Only an SSE 'done'
+      // (real===true) can produce the green "echt" check.
+      current.approval = "granted";
+      render();
+      announce("Freigegeben. Aktion wird ausgeführt – warte auf Bestätigung des Streams.");
+    }).catch(function(){
+      setHitlButtonsDisabled(document.getElementById("row-"+id), false);
+      announce("Freigabe wurde nicht bestätigt. Bitte erneut versuchen.");
+    });
   }
 
   function deny(id){
     var a = state.get(id);
     if(!a) return;
     var node = document.getElementById("row-"+id);
-    disableHitlButtons(node);
-    postDecision(id, "denied");
-    a.approval = "denied";               // terminal, local
-    render();
-    announce("Abgelehnt. Keine Ausführung.");
+    setHitlButtonsDisabled(node, true);
+    postDecision(id, "denied").then(function(){
+      var current = state.get(id);
+      if(!current) return;
+      current.approval = "denied";        // terminal only after backend accepts
+      render();
+      announce("Abgelehnt. Keine Ausführung.");
+    }).catch(function(){
+      setHitlButtonsDisabled(document.getElementById("row-"+id), false);
+      announce("Ablehnung wurde nicht bestätigt. Bitte erneut versuchen.");
+    });
   }
 
   function wireHitl(){
@@ -1015,7 +1077,7 @@
     startBtn.disabled = true;
     fetch("/run", {
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:jsonHeaders(),
       body: JSON.stringify({instruction: CANON, hitl: true})
     }).then(function(r){
       if(!r.ok){ throw new Error("status "+r.status); }
@@ -1030,20 +1092,20 @@
 
   /* =========================================================================
      ~1.5s FALLBACK — five baked demo actions, shown only if no SSE arrives.
-     Any live snapshot/action overrides it (liveReceived gate).
+     Any live run_start or first live action overrides it by clearing baked rows.
      ========================================================================= */
   var FALLBACK = [
-    { action_id:"a1", tool:"lookup_foerderung", real:true, status:"done", approval:null,
-      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (belegt)",
+    { action_id:"a1", tool:"lookup_foerderung", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (Vorschau)",
       source:"https://www.kfw.de/…261 (Stand 2026-05)",
       source_href:"https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/F%C3%B6rderprodukte/Wohngeb%C3%A4ude-Kredit-(261)/" },
-    { action_id:"a2", tool:"create_calendar_event", real:true, status:"awaiting_approval", approval:null,
+    { action_id:"a2", tool:"create_calendar_event", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Folgetermin Mi 14:00?", _trusted:true,
-      detail:'Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Echte Kalender-Einladung wird verschickt.',
+      detail:'Vorschau: Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Keine echte Kalender-Einladung ohne Live-Stream.',
       prompt:"Soll ich den Termin jetzt anlegen und die Einladung an Frau Schäfer senden?" },
-    { action_id:"a3", tool:"send_mail", real:true, status:"executing", approval:"granted",
+    { action_id:"a3", tool:"send_mail", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Unterlagen-Mail an Kunden", _trusted:true,
-      detail:'Freigegeben um 11:21 · sende Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Mail landet live.</em>' },
+      detail:'Vorschau: Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Keine Mail wurde gesendet.</em>' },
     { action_id:"a4", tool:"crm_upsert", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Kunde aktualisiert (Vorschau · next integration)",
       detail:"Stub – noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation. Wird in der nächsten Integration echt." },
@@ -1060,14 +1122,18 @@
   }, 1500);
 
   /* =========================================================================
-     EventSource — snapshot (re-hydrate) / action (upsert) / ping (ignore).
-     Survives a drop and re-hydrates from the NEXT snapshot, no reload.
+     EventSource — real server sends unnamed StreamMsg frames only.
+     Survives a drop; browser auto-retries and future frames continue updating.
      ========================================================================= */
-  function markLive(){
+  function markLive(resetFallback){
     if(!liveReceived){
       liveReceived = true;
-      isFallback = false;
       clearTimeout(fallbackTimer);
+    }
+    if(resetFallback && (isFallback || !runActive)){
+      resetLiveRun();
+    } else {
+      isFallback = false;
       fbNote.classList.remove("show");
       listEl.classList.remove("fallback");
     }
@@ -1088,32 +1154,37 @@
         var m;
         try{ m = JSON.parse(ev.data); }catch(e){ return; }
         if(!m || !m.kind) return;     // ignore retry-only / malformed frames
-        markLive();                   // any live message overrides the fallback
-
         if(m.kind === "run_start"){
+          markLive(true);
           // A run_start resets the client's incremental action list.
-          state = new Map();
-          order = [];
           render();
           connText.textContent = "Läuft …";
           if(startBtn) startBtn.disabled = true;
         } else if(m.kind === "action"){
+          markLive(isFallback);
           upsert(normalize(m.action)); // map .id -> action_id, then upsert
           render();
         } else if(m.kind === "answer"){
+          markLive(false);
           showAnswer(m.text, false);
         } else if(m.kind === "error"){
+          markLive(false);
           showAnswer("Fehler: " + (m.message || ""), true);
         } else if(m.kind === "run_end"){
+          markLive(false);
+          runActive = false;
           connText.textContent = "Fertig · Live verbunden";
           if(startBtn) startBtn.disabled = false;
         }
       };
 
-      es.onopen  = function(){ setConn(true); };
+      es.onopen  = function(){
+        setConn(true);
+        markLive(false); // connected backend: suppress disconnected preview fallback
+      };
       es.onerror = function(){
         // SSE dropped — show reconnecting; browser auto-retries. We KEEP the
-        // current render and re-hydrate cleanly from the next snapshot.
+        // current render stays visible while the browser reconnects.
         setConn(false);
       };
     }catch(e){ /* no server -> fallback handles it */ }
@@ -1127,17 +1198,18 @@
   ----------------------------------------------------------------------------
   HONESTY INVARIANTS (sacred):
    [x] Green "echt" check reachable ONLY via real===true && status==='done':
-       resolveVisual() early-returns the amber "stub" visual for real!==true
-       BEFORE any status branch, so a4/a5 (real:false) can never reach the
-       'done' branch even if a buggy/hostile snapshot sets status:'done'.
+       resolveVisual() handles terminal denied/error statuses first, then
+       early-returns the amber "stub" visual for real!==true BEFORE any green
+       status branch, so real:false actions can never reach the 'done' branch
+       even if a buggy/hostile event sets status:'done'.
        The buildNode "Freigegeben …" granted-decision line (which renders a green
        check glyph) is now ALSO gated on real===true && (v.kind==='exec'|'pending')
-       && approval==='granted' && status!=='done', so a hostile snapshot
+       && approval==='granted' && status!=='done', so a hostile event
        ({real:false, approval:'granted', status:'executing'}) cannot leak a green
        check there either — the invariant is unbypassable on every render path.
-   [x] real===false (crm_upsert, create_ticket) -> amber "Vorschau · nächste
-       Integration", terminal, .stub spine (neutral hair, never a done glow),
-       never a green check.
+   [x] real===false -> amber "Vorschau · nächste Integration" unless backend
+       status is explicit denied/error; all three terminal paths use .stub/
+       warning spine styling, never a done glow, never a green check.
    [x] Color never the sole signal: every tag/marker pairs color + inline SVG
        icon + text; legend explains echt vs. Vorschau persistently.
    [x] lookup_foerderung surfaces action.source verbatim in the .source block
@@ -1148,21 +1220,24 @@
   TECHNICAL CONTRACT:
    [x] Single self-contained file: inline <style> + inline <script>, vanilla JS,
        no CDN/framework/build, inline SVG only (no emoji).
-   [x] EventSource("/events"): "snapshot" (array -> wholesale re-hydrate),
-       "action" (object -> upsert by action_id), "ping" ignored.
-   [x] Survives SSE drop: onerror sets data-conn="down" + keeps render; next
-       snapshot wholesale re-hydrates, no hard reload.
+   [x] EventSource("/events"): current unnamed server messages with kind:"action"
+       upsert by action.id; run_start clears the incremental list.
+   [x] Survives SSE drop: onerror sets data-conn="down" and keeps the current
+       render visible while the browser reconnects.
    [x] HITL: awaiting_approval && approval==null -> Freigeben/Ablehnen.
-       Freigeben -> POST /actions/{id}/approve {"decision":"granted"} (no fake done);
-       Ablehnen -> {"decision":"denied"} reflected as terminal. Buttons disabled
-       on click via element.disabled AND [disabled] (pointer-events:none + opacity).
+       Freigeben -> POST /approve {"id", "decision":"granted"} (no fake done);
+       Ablehnen -> {"decision":"denied"}. Both decisions are rendered only after
+       /approve returns success; failed requests keep the awaiting state and
+       re-enable buttons. Buttons are disabled while the request is in flight via
+       element.disabled AND [disabled] (pointer-events:none + opacity).
    [x] "Nacharbeit starten" -> POST /run; 404/failure -> inline #runHint, no fake.
-   [x] Five demo actions baked as FALLBACK, shown only if no SSE within ~1.5s,
-       dimmed (.timeline.fallback) + fallback-note; any live event overrides.
+   [x] Five demo actions baked as preview-only FALLBACK (real:false), shown only
+       if no SSE within ~1.5s, dimmed (.timeline.fallback) + fallback-note;
+       run_start or the first live action clears baked rows before live rendering.
    [x] a11y: :focus-visible rings; aria-live timeline + dedicated sr-only
        announce() region for grant/deny; document-scoped Enter=Freigeben /
        Esc=Ablehnen on the single awaiting node (INPUT/TEXTAREA/BUTTON/A guard);
-       focus moves to the awaiting Freigeben button after fallback/snapshot;
+       focus moves to the awaiting Freigeben button after fallback/live render;
        prefers-reduced-motion blanket + explicit kill; live pill min-height 44px,
        buttons min 48px/44px. CONTRAST (light, small bold uppercase tags, >=4.5:1):
        --warn #8a5200 on --warn-bg; --ok #0b6f46 on --ok-bg (~4.7:1, was 4.47:1);

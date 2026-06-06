@@ -89,7 +89,9 @@ Notes:
 - `/approve` `decision` is normalized: anything other than the literal `"denied"` is treated as
   `"granted"`. The `id` must match the `action.id` of the currently-pending gated action.
 - Optional shared secret `UI_TOKEN`: when set, `/run` and `/approve` require header
-  `x-ui-token: <token>`.
+  `x-ui-token: <token>`. The browser UI can be opened once with `?ui_token=<token>`;
+  it stores the token in session storage, strips it from the URL, and sends the
+  header on `/run` and `/approve`.
 
 ### Canonical "Nacharbeit starten" instruction (verbatim `/run` instruction)
 
