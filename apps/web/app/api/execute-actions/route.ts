@@ -58,8 +58,8 @@ function isAllowedLiveDemoRequest(
   });
 }
 
-function hasDuplicateActionTypes(actions: Action[]): boolean {
-  return new Set(actions.map((action) => action.typ)).size !== actions.length;
+function hasDuplicateActions(actions: Action[]): boolean {
+  return new Set(actions.map((action) => JSON.stringify(action))).size !== actions.length;
 }
 
 function hasLiveExecutionSecret(request: Request): boolean {
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
     }
 
     const { kunde, kunde_email, actions } = parsed.data;
-    if (hasDuplicateActionTypes(actions)) {
+    if (hasDuplicateActions(actions)) {
       return NextResponse.json(
         { error: "Doppelte Aktionen sind nicht erlaubt." },
         { status: 400 },
