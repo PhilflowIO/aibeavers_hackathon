@@ -1,0 +1,220 @@
+// tsdav liefert seinen ESM-Build als CJS aus (kein "type":"module" im Package),
+// daher scheitert Node an Named-Imports → Default-Import + Destrukturierung.
+import tsdav, { type DAVCalendar } from "tsdav";
+const { createDAVClient } = tsdav;
+import { createEvent, type EventAttributes } from "ics";
+import { tool } from "@langchain/core/tools";
+import { z } from "zod";
+import { loadCaldavConfig } from "../config.js";
+
+/* ──────────────────────────────────────────────────────────────
+ * CalDAV-Client (lazy, einmalig)
+ * ────────────────────────────────────────────────────────────── */
+
+type CalDavClient = Awaited<ReturnType<typeof createDAVClient>>;
+
+let _client: CalDavClient | null = null;
+
+async function getClient(): Promise<CalDavClient> {
+  if (_client) return _client;
+  const cfg = loadCaldavConfig();
+  _client = await createDAVClient({
+    serverUrl: cfg.CALDAV_SERVER_URL,
+    credentials: {
+      username: cfg.CALDAV_USER,
+      password: cfg.CALDAV_PASSWORD,
+    },
+    authMethod: "Basic",
+    defaultAccountType: "caldav",
+  });
+  return _client;
+}
+
+/** Wählt den Ziel-Kalender: per Name (ENV) oder den ersten gefundenen. */
+async function resolveCalendar(): Promise<DAVCalendar> {
+  const cfg = loadCaldavConfig();
+  const client = await getClient();
+  const calendars = await client.fetchCalendars();
+  if (!calendars.length) throw new Error("Keine CalDAV-Kalender gefunden.");
+
+  if (cfg.CALDAV_CALENDAR_NAME) {
+    const match = calendars.find(
+      (c) =>
+        (typeof c.displayName === "string" ? c.displayName : "") ===
+        cfg.CALDAV_CALENDAR_NAME
+    );
+    if (!match) {
+      const names = calendars
+        .map((c) => (typeof c.displayName === "string" ? c.displayName : "?"))
+        .join(", ");
+      throw new Error(
+        `Kalender "${cfg.CALDAV_CALENDAR_NAME}" nicht gefunden. Verfügbar: ${names}`
+      );
+    }
+    return match;
+  }
+  return calendars[0];
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * ICS-Generierung
+ * ────────────────────────────────────────────────────────────── */
+
+/** ISO-8601-String → ics-Datumstupel [Y, M, D, h, m] (lokale Felder). */
+function toIcsDate(iso: string): [number, number, number, number, number] {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) throw new Error(`Ungültiges Datum: ${iso}`);
+  return [
+    d.getFullYear(),
+    d.getMonth() + 1,
+    d.getDate(),
+    d.getHours(),
+    d.getMinutes(),
+  ];
+}
+
+interface BuildIcsArgs {
+  title: string;
+  start: string;
+  end: string;
+  description?: string;
+  location?: string;
+  attendees?: { name?: string; email: string }[];
+  organizerEmail?: string;
+}
+
+function buildIcs(args: BuildIcsArgs): string {
+  const event: EventAttributes = {
+    title: args.title,
+    start: toIcsDate(args.start),
+    end: toIcsDate(args.end),
+    description: args.description,
+    location: args.location,
+    status: "CONFIRMED",
+    busyStatus: "BUSY",
+    organizer: args.organizerEmail
+      ? { name: "Berater Agent", email: args.organizerEmail }
+      : undefined,
+    attendees: args.attendees?.map((a) => ({
+      name: a.name,
+      email: a.email,
+      rsvp: true,
+      partstat: "NEEDS-ACTION",
+      role: "REQ-PARTICIPANT",
+    })),
+  };
+  const { error, value } = createEvent(event);
+  if (error || !value) {
+    throw new Error(`ICS-Erzeugung fehlgeschlagen: ${error?.message ?? "?"}`);
+  }
+  return value;
+}
+
+/* ──────────────────────────────────────────────────────────────
+ * Tools
+ * ────────────────────────────────────────────────────────────── */
+
+export const listEventsTool = tool(
+  async ({ start, end }) => {
+    const client = await getClient();
+    const calendar = await resolveCalendar();
+    const objects = await client.fetchCalendarObjects({
+      calendar,
+      timeRange:
+        start && end
+          ? { start: new Date(start).toISOString(), end: new Date(end).toISOString() }
+          : undefined,
+    });
+    if (!objects.length) return "Keine Termine im angefragten Zeitraum.";
+
+    const lines = objects.map((o) => {
+      const data = o.data ?? "";
+      const summary = /SUMMARY:(.*)/.exec(data)?.[1]?.trim() ?? "(kein Titel)";
+      const dtstart = /DTSTART[^:]*:(.*)/.exec(data)?.[1]?.trim() ?? "?";
+      const dtend = /DTEND[^:]*:(.*)/.exec(data)?.[1]?.trim() ?? "?";
+      return `• ${summary} | ${dtstart} → ${dtend}`;
+    });
+    return `Termine in "${
+      typeof calendar.displayName === "string" ? calendar.displayName : "Kalender"
+    }":\n` + lines.join("\n");
+  },
+  {
+    name: "list_calendar_events",
+    description:
+      "Liest Termine aus dem CalDAV-Kalender. Optional auf einen Zeitraum (start/end, " +
+      "ISO-8601) eingrenzen. Nutze dies, um vor dem Anlegen eines Folgetermins die " +
+      "Verfügbarkeit zu prüfen.",
+    schema: z.object({
+      start: z
+        .string()
+        .optional()
+        .describe("Beginn des Zeitraums, ISO-8601 (z.B. 2026-06-08T00:00:00)"),
+      end: z
+        .string()
+        .optional()
+        .describe("Ende des Zeitraums, ISO-8601"),
+    }),
+  }
+);
+
+export const createEventTool = tool(
+  async ({ title, start, end, description, location, attendees }) => {
+    const cfg = loadCaldavConfig();
+    const client = await getClient();
+    const calendar = await resolveCalendar();
+
+    const ics = buildIcs({
+      title,
+      start,
+      end,
+      description,
+      location,
+      attendees,
+      organizerEmail: cfg.CALDAV_USER.includes("@") ? cfg.CALDAV_USER : undefined,
+    });
+
+    // UID aus dem ICS ziehen → eindeutiger Dateiname auf dem Server.
+    const uid = /UID:(.*)/.exec(ics)?.[1]?.trim() ?? `${Date.now()}@aibeavers`;
+    const res = await client.createCalendarObject({
+      calendar,
+      filename: `${uid}.ics`,
+      iCalString: ics,
+    });
+
+    if (!res.ok) {
+      return `Termin konnte nicht angelegt werden (HTTP ${res.status}). Server: ${res.statusText}`;
+    }
+    return [
+      `Termin "${title}" angelegt (${start} → ${end}).`,
+      attendees?.length
+        ? `Teilnehmer: ${attendees.map((a) => a.email).join(", ")}.`
+        : "",
+      "ICS_BEGIN",
+      ics,
+      "ICS_END",
+      "Hinweis: Den ICS-Block kannst du via send_email (Feld icalEvent) als Einladung verschicken.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  },
+  {
+    name: "create_calendar_event",
+    description:
+      "Legt einen neuen Termin im CalDAV-Kalender an (z.B. einen Folgetermin nach dem " +
+      "Beratungsgespräch). Gibt den erzeugten ICS-Inhalt zurück, der anschließend per " +
+      "send_email als echte Kalender-Einladung an den Kunden verschickt werden kann.",
+    schema: z.object({
+      title: z.string().describe("Titel des Termins"),
+      start: z.string().describe("Startzeit, ISO-8601 (z.B. 2026-06-12T10:00:00)"),
+      end: z.string().describe("Endzeit, ISO-8601"),
+      description: z.string().optional().describe("Agenda / Beschreibung"),
+      location: z.string().optional().describe("Ort oder Videolink"),
+      attendees: z
+        .array(z.object({ name: z.string().optional(), email: z.string() }))
+        .optional()
+        .describe("Eingeladene Teilnehmer"),
+    }),
+  }
+);
+
+export const calendarTools = [listEventsTool, createEventTool];
