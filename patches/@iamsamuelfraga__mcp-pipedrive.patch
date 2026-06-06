@@ -1,0 +1,119 @@
+diff --git a/dist/schemas/deal.js b/dist/schemas/deal.js
+index 4931999c91e1cedd429ee07c5436ffb297c1efa8..72885e298bde5ed45f8f72e9d084356e597a271d 100644
+--- a/dist/schemas/deal.js
++++ b/dist/schemas/deal.js
+@@ -139,20 +139,22 @@ export const SearchDealsSchema = z
+         .max(255, 'Search term cannot exceed 255 characters')
+         .describe('Search term'),
+     fields: z
+-        .enum(['title', 'notes', 'custom_fields', 'all'], {
+-        errorMap: () => ({ message: 'Fields must be one of: title, notes, custom_fields, all' }),
++        .enum(['title', 'notes', 'custom_fields'], {
++        errorMap: () => ({ message: 'Fields must be one of: title, notes, custom_fields' }),
+     })
+         .optional()
+-        .default('all')
+-        .describe('Fields to search in'),
++        .describe('Fields to search in (omit to search all fields)'),
+     exact_match: BooleanLikeSchema.optional()
+         .default(false)
+         .describe('Whether to perform exact match search'),
+     person_id: OptionalIdSchema.describe('Filter by person ID'),
+     org_id: OptionalIdSchema.describe('Filter by organization ID'),
+-    status: DealStatusSchema.optional()
+-        .default('all_not_deleted')
+-        .describe('Filter by deal status'),
++    status: z
++        .enum(['open', 'won', 'lost'], {
++        errorMap: () => ({ message: 'Status must be one of: open, won, lost' }),
++    })
++        .optional()
++        .describe('Filter by deal status (omit to search all statuses)'),
+     include_fields: z
+         .string()
+         .optional()
+diff --git a/dist/schemas/person.js b/dist/schemas/person.js
+index 4d1d2bc09b3b7b2c5f5c99576aa4d3cfb98082f5..d73905ba10398b0d3368678390bd302f6bcf4d56 100644
+--- a/dist/schemas/person.js
++++ b/dist/schemas/person.js
+@@ -66,14 +66,13 @@ export const SearchPersonsSchema = z
+         .max(255, 'Search term cannot exceed 255 characters')
+         .describe('Search term'),
+     fields: z
+-        .enum(['name', 'email', 'phone', 'notes', 'custom_fields', 'all'], {
++        .enum(['name', 'email', 'phone', 'notes', 'custom_fields'], {
+         errorMap: () => ({
+-            message: 'Fields must be one of: name, email, phone, notes, custom_fields, all',
++            message: 'Fields must be one of: name, email, phone, notes, custom_fields',
+         }),
+     })
+         .optional()
+-        .default('all')
+-        .describe('Fields to search in'),
++        .describe('Fields to search in (omit to search all fields)'),
+     exact_match: BooleanLikeSchema.optional()
+         .default(false)
+         .describe('Whether to perform exact match search'),
+diff --git a/dist/schemas/system.js b/dist/schemas/system.js
+index 7e6297f39f0f952cf7b0eef7cd39171f17bf5f11..114ac4d57b0fe0fca379889e2731d4be4f5220b6 100644
+--- a/dist/schemas/system.js
++++ b/dist/schemas/system.js
+@@ -1,10 +1,15 @@
+ import { z } from 'zod';
+-import { PaginationSchema, DateTimeStringSchema } from './common.js';
++import { PaginationSchema } from './common.js';
+ /**
+  * Schema for getting recents with pagination
+  */
+ export const GetRecentsSchema = PaginationSchema.extend({
+-    since_timestamp: DateTimeStringSchema.describe('The timestamp in UTC. Format: YYYY-MM-DD HH:MM:SS'),
++    // Pipedrive /recents expects "YYYY-MM-DD HH:MM:SS". Accept either that format or
++    // ISO 8601 (with T separator) and normalise to what the API requires.
++    since_timestamp: z.string()
++        .regex(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/, 'DateTime must be YYYY-MM-DD HH:MM:SS or ISO 8601')
++        .transform(val => val.replace('T', ' ').replace(/\.\d+Z?$/, '').replace(/Z$/, '').substring(0, 19))
++        .describe('The timestamp in UTC. Format: YYYY-MM-DD HH:MM:SS (e.g. 2024-12-10 10:00:00)'),
+     items: z
+         .string()
+         .optional()
+diff --git a/dist/tools/deals/search.js b/dist/tools/deals/search.js
+index 7938ffa2e8a350ae629eb40d3a76850188f075eb..6ebe8e31107c9536a0e1f1d5359cc318f8862376 100644
+--- a/dist/tools/deals/search.js
++++ b/dist/tools/deals/search.js
+@@ -26,8 +26,8 @@ Common use cases:
+                     term: { type: 'string', description: 'Search term (minimum 2 characters)' },
+                     fields: {
+                         type: 'string',
+-                        enum: ['title', 'notes', 'custom_fields', 'all'],
+-                        description: 'Fields to search in (default: all)',
++                        enum: ['title', 'notes', 'custom_fields'],
++                        description: 'Fields to search in (omit to search all fields)',
+                     },
+                     exact_match: {
+                         type: 'boolean',
+@@ -37,8 +37,8 @@ Common use cases:
+                     org_id: { type: 'number', description: 'Filter by organization ID' },
+                     status: {
+                         type: 'string',
+-                        enum: ['open', 'won', 'lost', 'deleted', 'all_not_deleted'],
+-                        description: 'Filter by deal status',
++                        enum: ['open', 'won', 'lost'],
++                        description: 'Filter by deal status (omit to search all statuses)',
+                     },
+                     include_fields: {
+                         type: 'string',
+diff --git a/dist/tools/persons/search.js b/dist/tools/persons/search.js
+index d306c980b240785509433eb2aa8076a7def81e37..4ff7410e7e407bc5db554e44764482655f7fce6e 100644
+--- a/dist/tools/persons/search.js
++++ b/dist/tools/persons/search.js
+@@ -29,8 +29,8 @@ The search is case-insensitive and supports partial matches.`,
+                 },
+                 fields: {
+                     type: 'string',
+-                    description: 'Fields to search in: name, email, phone, notes, custom_fields, or all (default: all)',
+-                    enum: ['name', 'email', 'phone', 'notes', 'custom_fields', 'all'],
++                    description: 'Fields to search in (omit to search all fields)',
++                    enum: ['name', 'email', 'phone', 'notes', 'custom_fields'],
+                 },
+                 exact_match: {
+                     type: 'boolean',
