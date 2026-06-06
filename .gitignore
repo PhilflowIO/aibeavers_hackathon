@@ -4,6 +4,9 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+.env.production
+.env.demo
+.env.*.local
 *.log
 .DS_Store
 .cache/
