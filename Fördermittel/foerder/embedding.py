@@ -38,6 +38,11 @@ def build_query_text(text: str) -> str:
     return f"Instruct: {INSTRUCT_TASK}\nQuery: {text}"
 
 
+def _identity(text: str) -> str:
+    """Default query wrapper — no transform (backends like bge-m3 need no prefix)."""
+    return text
+
+
 def sanitize_input(text: str) -> str:
     """Replace empty/whitespace-only input with NULL_FILL to avoid a 422."""
     return text if text.strip() else NULL_FILL
@@ -76,7 +81,7 @@ class _OpenAICompatProvider:
         batch_size: int,
         concurrency: int,
         require_token: bool,
-        query_wrapper: Callable[[str], str] = lambda t: t,
+        query_wrapper: Callable[[str], str] = _identity,
     ) -> None:
         self._endpoint = endpoint
         self._model = model
