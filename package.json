@@ -19,7 +19,7 @@
     "typecheck:web": "pnpm --filter web exec tsc --noEmit",
     "deploy:web": "bash scripts/deploy-web.sh"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "dependencies": {
     "@arizeai/openinference-instrumentation-langchain": "^4.0.12",
     "@iamsamuelfraga/mcp-pipedrive": "^2.1.0",

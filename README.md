@@ -137,6 +137,15 @@ pnpm install && pnpm dev:web
 | [`docs/00-FINAL-demo-positionierung-build.md`](docs/00-FINAL-demo-positionierung-build.md) | Demo-Bogen + Build-Entscheidungen (Historie) |
 | [`docs/AI BEAVERS founder hackathon judging and scoring guide.md`](docs/AI%20BEAVERS%20founder%20hackathon%20judging%20and%20scoring%20guide.md) | Judging-Rubrik (wonach bewertet wird) |
 
+## Einreichung
+
+Gebaut am **6. Juni 2026** beim **AI BEAVERS × Mollie Founder Hackathon** (Hamburg, House of AI). Der gesamte Commit-Verlauf stammt vom Hackathon-Tag (nachprüfbar via `git log`).
+
+- **Repo:** [github.com/PhilflowIO/aibeavers_hackathon](https://github.com/PhilflowIO/aibeavers_hackathon) (public)
+- **Lizenz:** [MIT](LICENSE)
+- **Kontakt:** jacob@philflow.io
+- **Demo:** live auf der Bühne (3-Min-Pitch); lokal `pnpm install` → `pnpm dev:web` → http://localhost:3000 (pnpm-Install-Gates sind in `pnpm-workspace.yaml` vorkonfiguriert; Node ≥22 via `engines`). Details: [Demo-UI](#demo-ui).
+
 <div align="center">
 
 **Heute der Finanzberater. Morgen jedes Team, das in seiner eigenen Nacharbeit ersäuft.**
