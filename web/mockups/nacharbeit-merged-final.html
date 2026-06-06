@@ -35,11 +35,11 @@
       - Executing indeterminate .progress bar.
 
     GRAFTED FROM CANDIDATE C (honesty core + a11y hardening — highest priority):
-      - resolveVisual(a): a SINGLE guard that early-returns the amber "stub /
-        Vorschau" visual whenever a.real!==true, BEFORE any status branch. Green
-        "echt" is therefore structurally reachable ONLY through the
-        real===true && status==='done' branch — the sacred invariant is
-        unbypassable, not convention-enforced.
+      - resolveVisual(a): denied/error terminal states win first; otherwise
+        a.real!==true early-returns the amber "stub / Vorschau" visual before
+        any green status branch. Green "echt" is therefore structurally
+        reachable ONLY through the real===true && status==='done' branch —
+        the sacred invariant is unbypassable, not convention-enforced.
       - Contrast-hardened tokens: light --warn:#8a5200, dark --ink-2:#cbcfdb
         (both verified >=4.5:1 for tag-warn text on --warn-bg, dim text on paper).
       - Live status pill min-height:44px (>=44px target), with B's data-conn
@@ -651,9 +651,10 @@
      fallback share exactly this code path. State is a Map keyed by action id
      (backend action.id, with action_id accepted for baked mockup data).
      The honesty invariant is enforced by resolveVisual() (grafted from C):
-     a single guard that early-returns the amber "stub" visual whenever
-     real!==true, BEFORE any status branch. The green "echt" visual is therefore
-     structurally reachable ONLY through real===true && status==='done'.
+     denied/error terminal states win before preview; otherwise real!==true
+     early-returns the amber "stub" visual before any green status branch. The
+     green "echt" visual is structurally reachable ONLY through
+     real===true && status==='done'.
      ========================================================================= */
 
   var MODEL = "qwen-7b@eu-vllm";
