@@ -11,6 +11,7 @@ import {
   type ActionResult,
   type ExecuteActionsResponse,
 } from "../lib/execute-helpers";
+import { DEMO_RECIPIENT_EMAIL } from "../../../lib/demo-config";
 
 const requestSchema = z.object({
   kunde: z.string(),
@@ -19,7 +20,7 @@ const requestSchema = z.object({
 });
 
 const DEMO_KUNDE = "Thomas Berger";
-const DEMO_KUNDE_EMAIL = "thomas.berger@example.com";
+const DEMO_KUNDE_EMAIL = DEMO_RECIPIENT_EMAIL;
 
 function isAllowedLiveDemoRequest(
   kunde: string,

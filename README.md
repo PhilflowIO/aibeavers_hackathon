@@ -102,10 +102,12 @@ pnpm install && pnpm dev:web
 # → http://localhost:3000
 ```
 
-`USE_MOCK_ANALYSIS` ist standardmäßig `true` — die UI läuft so **ohne Credentials** (gemockte Analyse/QA). Für den **LIVE-Hero** (echte Kalender-Einladung + echte Mail) müssen in `.env` gesetzt sein:
+`USE_MOCK_ANALYSIS` ist standardmäßig `true` — die UI läuft so **ohne Credentials** (gemockte Analyse/QA). Für den **LIVE-Hero** (echte Kalender-Einladung + echte Mail) in `apps/web/.env.local`:
 
-- `USE_MOCK_ANALYSIS=false` + `ALLOW_LIVE_ACTION_EXECUTION=true`
-- SMTP-Credentials (`SMTP_HOST` etc.) und CalDAV-Credentials (`CALDAV_SERVER_URL` etc.)
+- `ALLOW_LIVE_ACTION_EXECUTION=true` — und **`USE_MOCK_ANALYSIS=true` lassen** (die deterministische Mock-Analyse trifft exakt die Live-Allowlist; bei `false` liefert das LLM nicht-deterministische Werte, die NICHT matchen → es bleibt gemockt).
+- SMTP- (`SMTP_User`/`SMTP_Key`) und CalDAV-Credentials (`DAV_URL`/`DAV_User`/`DAV_Key`).
+- **`$` in Passwörtern als `\$` escapen** — sonst expandiert Next.js sie und der Versand schlägt mit `535` fehl (s. `.env.example`).
+- Optional `NEXT_PUBLIC_DEMO_RECIPIENT_EMAIL=du@example.com`, um die echte Einladung an ein Postfach zu schicken, das du auf der Bühne zeigen kannst (Default: `thomas.berger@example.com`). Vor `pnpm dev:web` / `build:web` setzen.
 
 ---
 

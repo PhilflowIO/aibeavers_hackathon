@@ -1,5 +1,7 @@
 "use client";
 
+import { DEMO_RECIPIENT_EMAIL } from "../../lib/demo-config";
+
 interface HeroMailToastProps {
   visible: boolean;
   /** true nur bei echtem Live-Versand (success + Message-ID). */
@@ -51,7 +53,7 @@ export function HeroMailToast({
             )}
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-            Folgetermin Berger — ESG + Wohn-Riester · thomas.berger@example.com
+            Folgetermin Berger — ESG + Wohn-Riester · {DEMO_RECIPIENT_EMAIL}
           </p>
           {isLive && externalId && (
             <p className="mt-1 truncate font-mono text-[10px] text-ink-faint">
