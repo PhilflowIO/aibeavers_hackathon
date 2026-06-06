@@ -43,7 +43,6 @@ export async function executeActions(params: {
   kunde: string;
   kunde_email?: string;
   actions: Action[];
-  execution_token?: string;
 }): Promise<ExecuteActionsResponse> {
   const response = await fetch("/api/execute-actions", {
     method: "POST",

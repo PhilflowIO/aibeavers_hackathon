@@ -6,7 +6,6 @@ import {
   askQuestion,
   executeActions,
 } from "./api-client";
-import { MOCK_QA } from "./mock-demo-data";
 import type {
   AnalyseResult,
   ActionExecutionInfo,
@@ -182,10 +181,11 @@ export function useDemoState(
         setQaResult(result);
         setState("qa_answered");
         timerRef.current = setTimeout(() => setState("complete"), 800);
-      } catch {
-        setQaResult(MOCK_QA);
-        setState("qa_answered");
-        timerRef.current = setTimeout(() => setState("complete"), 800);
+      } catch (err) {
+        setErrorMessage(
+          err instanceof Error ? err.message : "Q&A fehlgeschlagen",
+        );
+        setState("error");
       }
     },
     [clearTimers, transcript.meetings],
@@ -216,7 +216,7 @@ export function useDemoState(
     setCrmExecuted(true);
     void executeActions({
       kunde: transcript.kunde,
-      kunde_email: "berger@example.de",
+      kunde_email: "thomas.berger@example.com",
       actions: crmActions,
     })
       .then((response) => {
@@ -250,7 +250,6 @@ export function useDemoState(
       kunde: transcript.kunde,
       kunde_email: "thomas.berger@example.com",
       actions: heroActions,
-      execution_token: "berger-demo-actions",
     })
       .then((response) => {
         const ok = response.results.every(

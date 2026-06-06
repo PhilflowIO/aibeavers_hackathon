@@ -16,23 +16,23 @@ const requestSchema = z.object({
   kunde: z.string(),
   kunde_email: z.string().email().optional(),
   actions: z.array(actionSchema),
-  execution_token: z.string().optional(),
 });
 
-const DEMO_EXECUTION_TOKEN = "berger-demo-actions";
 const DEMO_KUNDE = "Thomas Berger";
 const DEMO_KUNDE_EMAIL = "thomas.berger@example.com";
+const LIVE_EXECUTION_SECRET_HEADER = "x-demo-execution-secret";
 
 function isAllowedLiveDemoRequest(
   kunde: string,
   kundeEmail: string | undefined,
   actions: Action[],
-  token: string | undefined,
 ): boolean {
-  if (token !== DEMO_EXECUTION_TOKEN) return false;
   if (kunde !== DEMO_KUNDE) return false;
   if (kundeEmail !== DEMO_KUNDE_EMAIL) return false;
   if (actions.length === 0 || actions.length > 2) return false;
+  if (new Set(actions.map((action) => action.typ)).size !== actions.length) {
+    return false;
+  }
 
   return actions.every((action) => {
     if (action.typ === "kalender") {
@@ -56,6 +56,12 @@ function isAllowedLiveDemoRequest(
     }
     return false;
   });
+}
+
+function hasLiveExecutionSecret(request: Request): boolean {
+  const secret = process.env.LIVE_ACTION_EXECUTION_SECRET?.trim();
+  if (!secret) return false;
+  return request.headers.get(LIVE_EXECUTION_SECRET_HEADER) === secret;
 }
 
 async function executeKalenderLive(
@@ -171,12 +177,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const { kunde, kunde_email, actions, execution_token } = parsed.data;
+    const { kunde, kunde_email, actions } = parsed.data;
     const results: ActionResult[] = [];
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
     const liveActionsEnabled =
       allowLiveActionExecution() &&
-      isAllowedLiveDemoRequest(kunde, kunde_email, actions, execution_token);
+      hasLiveExecutionSecret(request) &&
+      isAllowedLiveDemoRequest(kunde, kunde_email, actions);
 
     for (const action of actions) {
       if (!liveActionsEnabled || (useMockAnalysis() && action.typ !== "crm_task")) {
