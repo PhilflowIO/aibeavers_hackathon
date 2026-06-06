@@ -1,0 +1,1050 @@
+<!doctype html>
+<!--
+  ============================================================================
+  DESIGN DIRECTION: "Bold Editorial Statement" SKIN  +  "Live Ops Timeline" SPINE
+  Product: Nacharbeits-Agent — philflow — AI Beavers Hackathon, Hamburg 2026-06-06
+  ----------------------------------------------------------------------------
+  ONE coherent editorial design: warm paper/ink palette, serif display type,
+  red-orange accent (#e8410f) everywhere. The flat card list is replaced by a
+  vertical timeline SPINE (transcript -> derived actions -> executed) that has
+  been fully re-skinned into the editorial tokens. NO blue leftovers.
+
+  KEPT FROM BASE (editorial-bold):
+    - Warm tokens --ink/--paper/--accent (red-orange), --serif display font.
+    - Sticky .topbar; full .hero (kicker, big serif <h1><em>, .lede, italic
+      .tagline blockquote); .statstrip (3 stats); .work-head section heading;
+      .legend honesty key; .footer with EU/sovereignty mark.
+    - Editorial type: serif action titles, accent-red HITL/awaiting state,
+      dashed accent divider above HITL controls.
+    - btn-primary "Nacharbeit starten" + btn-ghost "Gespräch ansehen".
+    - Editorial @media(prefers-color-scheme: dark) block (editorial dark).
+    - Honesty model + tool SVG icons (calendar, mail, magnifier, CRM cylinder,
+      ticket, check, alert).
+
+  ADOPTED FROM DONOR (live-timeline), RE-SKINNED to editorial tokens:
+    - Vertical spine: 56px rail column, .rail::after connecting line, round
+      .marker per node, grid .node{ grid-template-columns:56px 1fr }.
+    - Status-carrying spine: completed segments tinted --ok; active segment
+      flowing gradient (@keyframes flow); HITL marker @keyframes throb RECOLORED
+      to --accent (red); executing spinner marker; stub marker tinted --warn.
+    - Node enter animation (@keyframes rise, staggered nth-child delays).
+    - Transcript source card at the TOP of the spine (causality anchor).
+    - Executing-row indeterminate .progress bar.
+
+  ONE CLIENT IDENTITY: Frau Schäfer · Altersvorsorge & Sanierung /
+  frau.schaefer@example.de (donor's "M. Hofmann" removed everywhere).
+
+  HONESTY MODEL (sacred):
+    green check "echt"  -> ONLY real===true && status===done.
+    real===false (crm_upsert, create_ticket) -> amber "Vorschau · nächste
+    Integration", terminal, NEVER a green check, never a spine "done" glow.
+    Color is never the sole signal: color + icon + text always paired.
+    lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
+
+  PRODUCTION-WIRED: EventSource("/events") (snapshot/action/ping), HITL POST
+  /actions/{id}/approve, POST /run with graceful degrade, ~1.5s fallback render.
+  Single self-contained file: inline <style> + vanilla JS, inline SVG only.
+  ============================================================================
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nacharbeits-Agent — philflow</title>
+<style>
+  /* ---------- TOKENS (editorial ink + paper) ---------- */
+  :root{
+    color-scheme: light dark;
+
+    --ink:        #0d0f14;
+    --ink-2:      #2b2f3a;
+    --paper:      #f4f1ea;   /* warm editorial off-white */
+    --paper-2:    #ffffff;
+    --line:       #1a1d24;
+    --hair:       rgba(13,15,20,.12);
+
+    /* Brand accent — confident editorial red/orange */
+    --accent:     #e8410f;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(232,65,15,.10);
+
+    /* Semantic */
+    --ok:         #0c7a4d;   /* echt / green */
+    --ok-bg:      #d8f0e2;
+    --ok-line:    #0c7a4d;
+    --warn:       #9a5b00;   /* Vorschau / amber */
+    --warn-bg:    #fbe7c2;
+    --warn-line:  #b06a00;
+    --live:       #0c7a4d;
+    --run:        #0a4ea3;   /* executing / blue accent on icon only */
+    --run-bg:     #d6e6fb;
+
+    --shadow-1: 0 1px 0 var(--hair);
+    --shadow-2: 0 6px 24px rgba(13,15,20,.10);
+
+    --r: 4px;
+    --r-lg: 8px;
+
+    --maxw: 1120px;
+    --t: 200ms cubic-bezier(.2,.7,.3,1);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:    #f3f0e8;
+      --ink-2:  #c2c6d2;
+      --paper:  #0c0e13;
+      --paper-2:#15181f;
+      --line:   #e8e6df;
+      --hair:   rgba(243,240,232,.16);
+      --accent: #ff5a28;
+      --accent-ink: #1a0d07;
+      --accent-soft: rgba(255,90,40,.14);
+      --ok:     #57e0a0; --ok-bg: #0e2e22; --ok-line: #57e0a0;
+      --warn:   #ffc266; --warn-bg: #2f230d; --warn-line: #ffc266;
+      --live:   #57e0a0;
+      --run:    #7db4ff; --run-bg:#10243f;
+      --shadow-2: 0 8px 30px rgba(0,0,0,.5);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* ---------- FOCUS (never removed) ---------- */
+  :focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:3px;
+    border-radius:3px;
+  }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    border-bottom:2px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:30;
+  }
+  .topbar .row{
+    display:flex; align-items:center; gap:16px;
+    padding:14px 0;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo{
+    width:40px; height:40px; flex:0 0 auto;
+    background:var(--ink); color:var(--paper);
+    border-radius:var(--r);
+    display:grid; place-items:center;
+  }
+  @media (prefers-color-scheme: dark){ .logo{ background:var(--accent); color:var(--accent-ink); } }
+  .logo svg{ width:24px; height:24px; }
+  .brand-txt{ display:flex; flex-direction:column; line-height:1.05; min-width:0; }
+  .brand-txt b{ font-size:1.02rem; letter-spacing:.2px; }
+  .brand-txt span{ font-size:.74rem; color:var(--ink-2); letter-spacing:.18em; text-transform:uppercase; }
+
+  .spacer{ flex:1 1 auto; }
+
+  /* Live indicator */
+  .live{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.82rem; font-weight:700; letter-spacing:.04em;
+    padding:8px 12px; border:1.5px solid var(--ok-line);
+    color:var(--ok); border-radius:999px; background:var(--ok-bg);
+    min-height:36px;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--live);
+    box-shadow:0 0 0 0 var(--live);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(12,122,77,.5); }
+    70%{ box-shadow:0 0 0 8px rgba(12,122,77,0); }
+    100%{ box-shadow:0 0 0 0 rgba(12,122,77,0); }
+  }
+  @media (prefers-reduced-motion: reduce){ .dot{ animation:none; } }
+
+  /* ---------- HERO (editorial) ---------- */
+  .hero{ padding:54px 0 38px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:.78rem; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--accent);
+  }
+  .kicker .bar{ width:34px; height:3px; background:var(--accent); display:inline-block; }
+
+  .hero h1{
+    font-family:var(--serif);
+    font-weight:800;
+    font-size:clamp(2.6rem, 7vw, 5.4rem);
+    line-height:.98;
+    letter-spacing:-.02em;
+    margin:.32em 0 .12em;
+    max-width:16ch;
+    text-wrap:balance;
+  }
+  .hero h1 em{ font-style:italic; color:var(--accent); }
+
+  .lede{
+    font-size:clamp(1.05rem, 2.1vw, 1.45rem);
+    color:var(--ink-2);
+    max-width:60ch;
+    margin:0 0 6px;
+  }
+  .tagline{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:clamp(1.1rem, 2.2vw, 1.5rem);
+    color:var(--ink);
+    border-left:4px solid var(--accent);
+    padding-left:16px;
+    margin:22px 0 28px;
+    max-width:48ch;
+  }
+
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+
+  .btn{
+    font:inherit; font-weight:800; letter-spacing:.01em;
+    border-radius:var(--r-lg); cursor:pointer;
+    min-height:52px; padding:0 26px;
+    display:inline-flex; align-items:center; gap:10px;
+    border:2px solid transparent;
+    transition:transform var(--t), background var(--t), box-shadow var(--t);
+  }
+  .btn svg{ width:20px; height:20px; }
+  .btn:active{ transform:translateY(2px); }
+  @media (prefers-reduced-motion: reduce){ .btn:active{ transform:none; } }
+
+  .btn-primary{
+    background:var(--accent); color:var(--accent-ink);
+    font-size:1.05rem; box-shadow:var(--shadow-2);
+  }
+  .btn-primary:hover{ background:#cf3309; }
+  @media (prefers-color-scheme: dark){ .btn-primary:hover{ background:#ff6f43; } }
+
+  .btn-ghost{
+    background:transparent; color:var(--ink); border-color:var(--line);
+  }
+  .btn-ghost:hover{ background:var(--ink); color:var(--paper); }
+  @media (prefers-color-scheme: dark){ .btn-ghost:hover{ background:var(--ink); color:var(--paper); } }
+
+  .src-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.8rem; color:var(--ink-2);
+  }
+  .src-pill svg{ width:16px; height:16px; flex:0 0 auto; }
+
+  /* run hint (degrade when /run unavailable) */
+  .runhint{
+    margin:14px 0 0; font-size:.86rem; color:var(--warn);
+    display:none; align-items:center; gap:8px;
+  }
+  .runhint.show{ display:inline-flex; }
+  .runhint svg{ width:16px; height:16px; flex:0 0 auto; }
+  .runhint code{ font-family:var(--mono); background:var(--warn-bg); color:var(--warn); padding:1px 6px; border-radius:var(--r); border:1px solid var(--warn-line); }
+
+  /* Editorial big stat strip */
+  .statstrip{
+    display:grid; grid-template-columns:repeat(3,1fr);
+    border-bottom:2px solid var(--line);
+  }
+  .stat{ padding:18px 4px 22px; }
+  .stat + .stat{ border-left:1px solid var(--hair); padding-left:22px; }
+  .stat b{ display:block; font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); line-height:1; }
+  .stat span{ font-size:.82rem; color:var(--ink-2); }
+  @media (max-width:680px){
+    .statstrip{ grid-template-columns:1fr; }
+    .stat + .stat{ border-left:0; border-top:1px solid var(--hair); padding-left:4px; }
+  }
+
+  /* ---------- WORK / LIVE SECTION ---------- */
+  .work{ padding:36px 0 64px; }
+  .work-head{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap; gap:16px; margin-bottom:18px;
+  }
+  .work-head h2{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(1.6rem,4vw,2.6rem); line-height:1; margin:0;
+    letter-spacing:-.01em;
+  }
+  .work-head p{ margin:6px 0 0; color:var(--ink-2); font-size:.95rem; }
+
+  /* Legend (persistent honesty key) */
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-radius:var(--r-lg); padding:12px 14px;
+    box-shadow:var(--shadow-1);
+  }
+  .legend .lg{ display:inline-flex; align-items:center; gap:8px; font-size:.83rem; font-weight:600; }
+  .legend .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 9px; border-radius:999px; font-weight:800; font-size:.74rem;
+    letter-spacing:.04em; text-transform:uppercase; border:1.5px solid;
+  }
+  .chip-ok{ color:var(--ok); background:var(--ok-bg); border-color:var(--ok-line); }
+  .chip-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .chip svg{ width:13px; height:13px; }
+  .legend .sep{ color:var(--ink-2); font-weight:400; }
+
+  /* ---------- TRANSCRIPT SOURCE (top of spine) ---------- */
+  .transcript{
+    margin:22px 0 6px;
+    background:var(--paper-2);
+    border:1.5px solid var(--hair);
+    border-left:5px solid var(--ink);
+    border-radius:var(--r-lg);
+    padding:16px 20px;
+    box-shadow:var(--shadow-1);
+  }
+  .transcript-head{
+    display:flex; align-items:center; gap:8px;
+    font-size:.74rem; font-weight:800;
+    color:var(--ink-2);
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .transcript-head svg{ width:15px; height:15px; color:var(--accent); }
+  .transcript p{
+    margin:8px 0 0;
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:clamp(1rem,1.8vw,1.2rem);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .transcript .who{ font-style:normal; font-family:var(--sans); font-weight:800; color:var(--accent); font-size:.82rem; letter-spacing:.04em; text-transform:uppercase; margin-right:6px; }
+  .flowchain{
+    margin-top:10px; display:inline-flex; align-items:center; gap:8px;
+    font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-2);
+  }
+  .flowchain svg{ width:14px; height:14px; color:var(--accent); }
+
+  /* ---------- THE TIMELINE SPINE (re-skinned editorial) ---------- */
+  .timeline{ position:relative; margin-top:26px; }
+  ol.timeline{ list-style:none; padding:0; }
+
+  .node{
+    position:relative;
+    display:grid;
+    grid-template-columns:56px 1fr;
+    gap:18px;
+    padding-bottom:24px;
+  }
+  .node:last-child{ padding-bottom:0; }
+
+  /* the connecting spine segment */
+  .rail{ position:relative; display:flex; flex-direction:column; align-items:center; }
+  .rail::after{
+    content:"";
+    position:absolute;
+    top:50px; bottom:-6px; left:50%;
+    width:3px; transform:translateX(-50%);
+    background:var(--hair);
+    border-radius:2px;
+  }
+  .node:last-child .rail::after{ display:none; }
+  /* completed segment tinted ok; active segment flows accent */
+  .node.done .rail::after{ background:linear-gradient(180deg, var(--ok), var(--hair)); }
+  .node.flow .rail::after{
+    background:linear-gradient(180deg, var(--accent), var(--hair));
+    background-size:100% 200%;
+    animation:flow 1.6s linear infinite;
+  }
+  @keyframes flow{
+    0%{ background-position:0 -40px; }
+    100%{ background-position:0 40px; }
+  }
+  @media (prefers-reduced-motion: reduce){ .node.flow .rail::after{ animation:none; } }
+
+  /* node marker (round, editorial) */
+  .marker{
+    width:48px; height:48px; flex:none;
+    border-radius:50%;
+    display:grid; place-items:center;
+    background:var(--paper-2);
+    border:2px solid var(--hair);
+    color:var(--ink-2);
+    z-index:1;
+    box-shadow:var(--shadow-1);
+    position:relative;
+  }
+  .marker > svg{ width:22px; height:22px; }
+  /* the editorial index numeral folded onto the marker */
+  .marker .idx{
+    position:absolute; top:-8px; left:-8px;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--ink); color:var(--paper);
+    font-family:var(--serif); font-weight:800; font-size:.78rem;
+    display:grid; place-items:center; line-height:1;
+    border:2px solid var(--paper);
+  }
+  @media (prefers-color-scheme: dark){ .marker .idx{ border-color:var(--paper); } }
+
+  .node.done .marker{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok); }
+  .node.hitl .marker{
+    background:var(--accent-soft); border-color:var(--accent); color:var(--accent);
+    box-shadow:0 0 0 1px var(--accent);
+    animation:throb 2s ease-in-out infinite;
+  }
+  @keyframes throb{
+    0%,100%{ box-shadow:0 0 0 1px var(--accent), 0 0 0 rgba(232,65,15,0); }
+    50%    { box-shadow:0 0 0 1px var(--accent), 0 0 22px rgba(232,65,15,.45); }
+  }
+  @media (prefers-reduced-motion: reduce){ .node.hitl .marker{ animation:none; } }
+  .node.exec .marker{ background:var(--run-bg); border-color:var(--run); color:var(--run); }
+  .node.stub .marker{ background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn); }
+
+  /* spinner inside executing marker */
+  .spin{ animation:spin 1.1s linear infinite; transform-origin:center; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){ .spin{ animation:none; } }
+
+  /* ---------- Action card (editorial paper) ---------- */
+  .card{
+    position:relative;
+    background:var(--paper-2);
+    border:1.5px solid var(--hair);
+    border-left:5px solid var(--hair);
+    border-radius:var(--r-lg);
+    padding:18px 20px;
+    box-shadow:var(--shadow-1);
+    transition:box-shadow var(--t), border-color var(--t);
+  }
+  .node.hitl .card{ border-left-color:var(--accent); box-shadow:var(--shadow-2); }
+  .node.exec .card{ border-left-color:var(--run); }
+  .node.done .card{ border-left-color:var(--ok-line); }
+  .node.stub .card{ border-left-color:var(--warn-line); }
+
+  .card-top{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+  .tool{
+    font-family:var(--mono);
+    font-size:.74rem; letter-spacing:.02em; color:var(--ink-2);
+    background:var(--paper); border:1px solid var(--hair);
+    padding:2px 7px; border-radius:var(--r);
+  }
+  .card-title{
+    font-family:var(--serif);
+    font-size:clamp(1.05rem,1.7vw,1.35rem); font-weight:800; line-height:1.2;
+    margin:6px 0 0; flex:1 1 100%; order:3;
+  }
+
+  /* status tags (color + text + icon) */
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font-weight:800;
+    font-size:.74rem; letter-spacing:.05em; text-transform:uppercase;
+    border:1.5px solid; order:2; margin-left:auto;
+  }
+  .tag svg{ width:13px; height:13px; }
+  .tag-ok{   color:var(--ok);   background:var(--ok-bg);   border-color:var(--ok-line); }
+  .tag-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .tag-run{  color:var(--run);  background:var(--run-bg);  border-color:var(--run); }
+  .tag-wait{ color:var(--accent); background:var(--accent-soft); border-color:var(--accent); }
+
+  .detail{ font-size:.9rem; color:var(--ink-2); margin:10px 0 0; display:flex; gap:9px; align-items:flex-start; }
+  .detail svg{ width:16px; height:16px; flex:0 0 auto; margin-top:2px; color:var(--ink-2); }
+  .detail strong{ color:var(--ink); }
+
+  /* source proof (verbatim, belegt nicht geraten) */
+  .source{
+    margin-top:10px; padding:10px 12px;
+    background:var(--paper); border:1px dashed var(--ok-line);
+    border-radius:var(--r); font-size:.84rem;
+    display:flex; gap:9px; align-items:flex-start;
+  }
+  .source > svg{ width:16px; height:16px; flex:0 0 auto; color:var(--ok); margin-top:2px; }
+  .source .lbl{ font-weight:800; color:var(--ok); display:block; text-transform:uppercase; letter-spacing:.06em; font-size:.72rem; margin-bottom:2px; }
+  .source a{ color:var(--ink); word-break:break-all; text-decoration:underline; text-underline-offset:2px; font-family:var(--mono); font-size:.8rem; }
+
+  .modelline{
+    margin-top:12px; font-size:.74rem; color:var(--ink-2);
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  }
+  .modelline svg{ width:14px; height:14px; }
+  .modelline b{ font-family:var(--mono); font-weight:700; color:var(--ink); }
+  .modelline .sep{ opacity:.5; }
+
+  /* executing progress bar (indeterminate) */
+  .progress{
+    margin-top:12px; height:6px; border-radius:999px;
+    background:var(--run-bg); overflow:hidden;
+  }
+  .progress > i{
+    display:block; height:100%; width:40%; border-radius:999px;
+    background:linear-gradient(90deg, transparent, var(--run), transparent);
+    animation:indet 1.4s ease-in-out infinite;
+  }
+  @keyframes indet{
+    0%{ transform:translateX(-120%); }
+    100%{ transform:translateX(320%); }
+  }
+  @media (prefers-reduced-motion: reduce){ .progress > i{ animation:none; width:100%; } }
+
+  /* HITL controls (dashed accent divider) */
+  .hitl{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  }
+  .hitl .q{ font-weight:800; font-size:.92rem; flex:1 1 220px; display:flex; align-items:center; gap:8px; }
+  .hitl .q svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent); }
+  .hitl .grp{ display:flex; gap:10px; }
+  .btn-approve, .btn-deny{
+    font:inherit; font-weight:800; border-radius:var(--r-lg);
+    display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+    transition:transform var(--t), filter var(--t), background var(--t);
+  }
+  .btn-approve{
+    background:var(--ok); color:#fff; border:2px solid var(--ok);
+    min-height:48px; padding:0 22px; font-size:1rem;
+  }
+  .btn-approve:hover{ filter:brightness(1.08); }
+  .btn-deny{
+    background:transparent; color:var(--ink); border:2px solid var(--line);
+    min-height:48px; padding:0 20px; font-size:1rem;
+  }
+  .btn-deny:hover{ background:var(--ink); color:var(--paper); }
+  .btn-approve:active, .btn-deny:active{ transform:translateY(2px); }
+  @media (prefers-reduced-motion: reduce){ .btn-approve:active,.btn-deny:active{ transform:none; } }
+  .btn-approve svg, .btn-deny svg{ width:18px; height:18px; }
+  .btn-approve[disabled], .btn-deny[disabled]{ opacity:.55; cursor:not-allowed; }
+
+  /* resolved-locally note (denied terminal) */
+  .resolved{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--hair);
+    font-weight:700; font-size:.9rem; color:var(--ink-2);
+    display:flex; align-items:center; gap:9px;
+  }
+  .resolved svg{ width:18px; height:18px; flex:0 0 auto; }
+
+  /* fallback dim while live stream not yet arrived */
+  .timeline.fallback{ opacity:.62; filter:saturate(.85); }
+  .fallback-note{
+    display:none; margin:0 0 14px; padding:10px 14px;
+    background:var(--paper-2); border:1.5px dashed var(--hair); border-radius:var(--r-lg);
+    font-size:.82rem; color:var(--ink-2); align-items:center; gap:9px;
+  }
+  .fallback-note.show{ display:flex; }
+  .fallback-note svg{ width:16px; height:16px; flex:0 0 auto; color:var(--ink-2); }
+
+  /* node enter animation (live stream feel) */
+  .node{ animation:rise 420ms cubic-bezier(.16,.84,.44,1) both; }
+  .node:nth-child(1){ animation-delay:.02s; }
+  .node:nth-child(2){ animation-delay:.10s; }
+  .node:nth-child(3){ animation-delay:.18s; }
+  .node:nth-child(4){ animation-delay:.26s; }
+  .node:nth-child(5){ animation-delay:.34s; }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(14px); }
+    to  { opacity:1; transform:none; }
+  }
+  @media (prefers-reduced-motion: reduce){ .node{ animation:none; } }
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    border-top:2px solid var(--line); padding:22px 0 40px;
+    color:var(--ink-2); font-size:.82rem;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  footer .eu{ display:inline-flex; align-items:center; gap:8px; font-weight:700; color:var(--ink); }
+  footer .eu svg{ width:18px; height:18px; }
+
+  @media (max-width:560px){
+    .node{ grid-template-columns:48px 1fr; gap:12px; }
+    .marker{ width:44px; height:44px; }
+    .rail::after{ top:46px; }
+    .hero-actions{ gap:10px; }
+    .btn-primary{ width:100%; justify-content:center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="wrap row">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h18M5 7l1.5 10h11L19 7M9 12h6"/>
+        </svg>
+      </span>
+      <span class="brand-txt">
+        <b>Nacharbeits-Agent</b>
+        <span>philflow · finance</span>
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <span class="live" id="liveBadge" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="liveText">Live verbunden</span>
+    </span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero wrap" aria-labelledby="h1">
+    <span class="kicker"><span class="bar" aria-hidden="true"></span>Nach dem Kundengespräch</span>
+    <h1 id="h1">Andere geben dir ein Protokoll. Wir geben dir deinen <em>Feierabend</em> zurück.</h1>
+    <p class="lede">
+      Klassische Notetaker liefern eine Liste. Dieser Agent <strong>erledigt</strong> die regulierte
+      Nacharbeit: Folgetermin buchen, Unterlagen-Mail schreiben, Förderung mit Quelle vorschlagen –
+      jeder Schritt mit deiner Freigabe.
+    </p>
+    <p class="tagline">„Belegt, nicht geraten.“ Souverän in der EU gehostet – Finanzdaten bleiben, wo sie hingehören.</p>
+
+    <div class="hero-actions">
+      <button class="btn btn-primary" id="startBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Nacharbeit starten
+      </button>
+      <button class="btn btn-ghost" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Gespräch ansehen
+      </button>
+      <span class="src-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        §34d/§34f-konform · EU-lokal
+      </span>
+    </div>
+    <p class="runhint" id="runHint" role="status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>
+      Kein Live-Server erreichbar — Demo per <code>make mock</code> starten.
+    </p>
+  </section>
+
+  <div class="wrap">
+    <div class="statstrip" aria-hidden="true">
+      <div class="stat"><b>5</b><span>Aktionen pro Gespräch</span></div>
+      <div class="stat"><b>2&nbsp;Klicks</b><span>menschliche Freigabe (HITL)</span></div>
+      <div class="stat"><b>100&nbsp;%</b><span>EU-gehostet · qwen-7b@eu-vllm</span></div>
+    </div>
+  </div>
+
+  <!-- ============ WORK / LIVE TIMELINE ============ -->
+  <section class="work wrap" aria-labelledby="workh">
+    <div class="work-head">
+      <div>
+        <h2 id="workh">Die Nacharbeit – live</h2>
+        <p>Frau Schäfer · Altersvorsorge &amp; Sanierung · heute 11:20 Uhr</p>
+      </div>
+      <div class="legend" role="note" aria-label="Legende zur Ehrlichkeit der Aktionen">
+        <span class="lg">
+          <span class="chip chip-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>echt</span>
+          Mail · Kalender · Förderung mit Quelle
+        </span>
+        <span class="sep" aria-hidden="true">|</span>
+        <span class="lg">
+          <span class="chip chip-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>Vorschau</span>
+          Stub – noch nicht verdrahtet
+        </span>
+      </div>
+    </div>
+
+    <!-- ===== TRANSCRIPT SOURCE — top of the spine, causality anchor ===== -->
+    <section class="transcript" aria-label="Gesprächs-Transkript · Quelle der Aktionen">
+      <div class="transcript-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+        Gespräch erfasst · Quelle der Aktionen
+      </div>
+      <p><span class="who">Berater</span>„…dann lassen Sie uns das mit der KfW-Förderung für die energetische Sanierung prüfen, Frau Schäfer, einen Folgetermin machen und ich schicke Ihnen die Unterlagen per Mail.“</p>
+      <div class="flowchain" aria-hidden="true">
+        Transkript
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Ableitung
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Ausführung
+      </div>
+    </section>
+
+    <p class="fallback-note" id="fallbackNote" role="status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      Vorschau-Daten — warte auf Live-Stream. Sobald der Stream sendet, werden diese Knoten überschrieben.
+    </p>
+
+    <!-- ===== THE SPINE ===== -->
+    <ol class="timeline fallback" id="timeline" aria-label="Live-Aktions-Timeline" aria-live="polite" aria-busy="true">
+      <!-- nodes rendered by JS (fallback after ~1.5s, live snapshot overrides) -->
+    </ol>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span class="eu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+    Souverän · EU-lokal gehostet · §34d/§34f-konform
+  </span>
+  <span>finance.philflow.io · AI Beavers Hackathon Hamburg · 2026-06-06</span>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ===================================================================
+     Honesty model (sacred):
+       green check "echt"  -> ONLY real===true && status==="done"
+       real===false        -> amber "Vorschau", terminal, NEVER green
+       lookup_foerderung    -> surface action.source verbatim
+     Color always paired with icon + text.
+     =================================================================== */
+
+  var TL        = document.getElementById('timeline');
+  var liveBadge = document.getElementById('liveBadge');
+  var liveText  = document.getElementById('liveText');
+  var runHint   = document.getElementById('runHint');
+  var fbNote    = document.getElementById('fallbackNote');
+
+  var state    = new Map();   // action_id -> action object
+  var order    = [];          // action_id order for stable spine
+  var liveSeen = false;       // any snapshot/action received?
+
+  /* ---------- inline SVG library (no emoji) ---------- */
+  var ICON = {
+    check:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>',
+    cross:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+    clock:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    spinner:'<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/><path d="M12 3a9 9 0 0 1 9 9" opacity=".25"/></svg>',
+    send:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>',
+    alert:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>',
+    eye:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+    link:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>',
+    cpu:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>',
+    // tool-appropriate marker icons
+    magnifier:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>',
+    mail:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    crm:      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5c0-1.1 4-2 9-2s9 .9 9 2-4 2-9 2-9-.9-9-2z"/><path d="M3 5v14c0 1.1 4 2 9 2s9-.9 9-2V5"/><path d="M3 12c0 1.1 4 2 9 2s9-.9 9-2"/></svg>',
+    ticket:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>'
+  };
+
+  function toolIcon(tool){
+    switch(tool){
+      case 'lookup_foerderung':     return ICON.magnifier;
+      case 'create_calendar_event': return ICON.calendar;
+      case 'send_mail':             return ICON.mail;
+      case 'crm_upsert':            return ICON.crm;
+      case 'create_ticket':         return ICON.ticket;
+      default:                      return ICON.cpu;
+    }
+  }
+
+  /* ---------- the five demo actions (FALLBACK only) ---------- */
+  var FALLBACK = [
+    { action_id:"a1", tool:"lookup_foerderung", real:true, hitl:false,
+      status:"done", approval:null, llm_model:"qwen-7b@eu-vllm",
+      summary:"Förderung erkannt: KfW 261 (belegt)",
+      source:"https://www.kfw.de/…261 (Stand 2026-05)",
+      source_href:"https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/Förderprodukte/Wohngebäude-Kredit-(261)/" },
+    { action_id:"a2", tool:"create_calendar_event", real:true, hitl:true,
+      status:"awaiting_approval", approval:null, llm_model:"qwen-7b@eu-vllm",
+      summary:"Folgetermin Mi 14:00?",
+      detail:"Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong>. Echte Kalender-Einladung an Frau Schäfer wird verschickt." },
+    { action_id:"a3", tool:"send_mail", real:true, hitl:true,
+      status:"executing", approval:"granted", llm_model:"qwen-7b@eu-vllm",
+      summary:"Unterlagen-Mail an Kunden?",
+      detail:"Freigegeben · sende Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Mail landet live.</em>" },
+    { action_id:"a4", tool:"crm_upsert", real:false, hitl:false,
+      status:"stub_preview", approval:null, llm_model:"qwen-7b@eu-vllm",
+      summary:"Kunde aktualisiert (Vorschau · next integration)",
+      detail:"Stub-Vorschau — noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation." },
+    { action_id:"a5", tool:"create_ticket", real:false, hitl:false,
+      status:"stub_preview", approval:null, llm_model:"qwen-7b@eu-vllm",
+      summary:"Ticket angelegt (Vorschau · next integration)",
+      detail:"Stub-Vorschau — Ticketsystem folgt im nächsten Schritt. Noch keine echte Anlage." }
+  ];
+
+  /* ---------- DOM helpers ---------- */
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // node-class + tag derived from status/real — single source of truth
+  function nodeClass(a){
+    if(a.status==='stub_preview' || a.real===false) return 'stub';
+    if(a.status==='awaiting_approval')              return 'hitl flow';
+    if(a.status==='executing')                      return 'exec flow';
+    if(a.status==='done')                           return 'done';
+    return '';
+  }
+  function markerInner(a){
+    if(a.status==='executing') return ICON.spinner;
+    return toolIcon(a.tool);
+  }
+  // status tag: HONESTY enforced here
+  function tagHtml(a){
+    if(a.real===false || a.status==='stub_preview'){
+      return '<span class="tag tag-warn">'+ICON.eye+'Vorschau · nächste Integration</span>';
+    }
+    if(a.status==='done'){              // real===true && done -> the ONLY green echt
+      return '<span class="tag tag-ok">'+ICON.check+'echt · erledigt</span>';
+    }
+    if(a.status==='executing'){
+      return '<span class="tag tag-run">'+ICON.send+'wird ausgeführt</span>';
+    }
+    if(a.status==='awaiting_approval'){
+      if(a.approval==='denied') return '<span class="tag tag-warn">'+ICON.cross+'abgelehnt</span>';
+      return '<span class="tag tag-wait">'+ICON.clock+'wartet auf Freigabe</span>';
+    }
+    if(a.status==='denied'){
+      return '<span class="tag tag-warn">'+ICON.cross+'abgelehnt</span>';
+    }
+    return '<span class="tag tag-wait">'+ICON.clock+'…</span>';
+  }
+
+  function modelFoot(a, extra){
+    return '<div class="modelline">'+ICON.cpu+'<span>Modell</span> <b>'+esc(a.llm_model||'qwen-7b@eu-vllm')+'</b>'+
+           (extra ? '<span class="sep">·</span><span>'+extra+'</span>' : '')+'</div>';
+  }
+
+  function cardBody(a){
+    var h = '';
+    h += '<div class="card-top">';
+    h +=   '<span class="tool">'+esc(a.tool)+'</span>';
+    h +=   tagHtml(a);
+    h +=   '<h3 class="card-title">'+esc(a.summary)+'</h3>';
+    h += '</div>';
+
+    // executing detail + progress
+    if(a.status==='executing'){
+      h += '<p class="detail">'+ICON.mail+'<span>'+(a.detail||'Wird gesendet …')+'</span></p>';
+      h += '<div class="progress" aria-hidden="true"><i></i></div>';
+    }
+    // awaiting -> detail + HITL controls (only if not yet decided)
+    else if(a.status==='awaiting_approval' && a.approval==null){
+      if(a.detail) h += '<p class="detail">'+ICON.calendar+'<span>'+a.detail+'</span></p>';
+      h += '<div class="hitl">';
+      h +=   '<span class="q">'+ICON.person+'Mensch entscheidet — diese Aktion ist echt. Jetzt anlegen und Einladung senden?</span>';
+      h +=   '<div class="grp">';
+      h +=     '<button class="btn-approve" type="button" data-approve="'+esc(a.action_id)+'">'+ICON.check+'Freigeben</button>';
+      h +=     '<button class="btn-deny" type="button" data-deny="'+esc(a.action_id)+'">'+ICON.cross+'Ablehnen</button>';
+      h +=   '</div>';
+      h += '</div>';
+    }
+    // denied terminal (local reflection)
+    else if(a.status==='denied' || (a.status==='awaiting_approval' && a.approval==='denied')){
+      h += '<div class="resolved">'+ICON.cross+'Abgelehnt — kein Termin angelegt. Terminal.</div>';
+    }
+    // done detail
+    else if(a.status==='done' && a.detail){
+      h += '<p class="detail">'+ICON.check+'<span>'+a.detail+'</span></p>';
+    }
+    // stub detail
+    else if((a.real===false || a.status==='stub_preview') && a.detail){
+      h += '<p class="detail">'+ICON.alert+'<span>'+esc(a.detail)+'</span></p>';
+    }
+
+    // source proof (lookup_foerderung) — verbatim, belegt nicht geraten
+    if(a.source){
+      h += '<div class="source">'+ICON.link+
+           '<span><span class="lbl">Belegt, nicht geraten · Quelle</span>'+
+           '<a href="'+esc(a.source_href||a.source)+'" target="_blank" rel="noopener">'+esc(a.source)+'</a></span></div>';
+    }
+
+    // model footnote
+    var note = a.hitl ? (a.status==='executing'?'HITL freigegeben':(a.status==='done'?'mit Freigabe':'HITL erforderlich'))
+                      : (a.real===false?'kein echter Schreibzugriff':'kein HITL nötig');
+    h += modelFoot(a, note);
+    return h;
+  }
+
+  function buildNode(a){
+    var li = document.createElement('li');
+    li.className = 'node ' + nodeClass(a);
+    li.setAttribute('data-action-id', a.action_id);
+    li.id = 'node-'+a.action_id;
+    var idx = (order.indexOf(a.action_id)+1);
+    var idxStr = idx<10 ? '0'+idx : ''+idx;
+    li.innerHTML =
+      '<div class="rail" aria-hidden="true"><div class="marker"><span class="idx">'+idxStr+'</span>'+markerInner(a)+'</div></div>'+
+      '<div class="card">'+cardBody(a)+'</div>';
+    wireNode(li, a);
+    return li;
+  }
+
+  function wireNode(li, a){
+    var ap = li.querySelector('[data-approve]');
+    var dn = li.querySelector('[data-deny]');
+    if(ap) ap.addEventListener('click', function(){ decide(a.action_id,'granted'); });
+    if(dn) dn.addEventListener('click', function(){ decide(a.action_id,'denied'); });
+  }
+
+  /* ---------- render whole spine from state ---------- */
+  function renderAll(){
+    TL.innerHTML = '';
+    order.forEach(function(id){
+      var a = state.get(id);
+      if(a) TL.appendChild(buildNode(a));
+    });
+    syncFocusHint();
+  }
+
+  // upsert a single action node (live "action" event)
+  function upsert(a){
+    if(!a || !a.action_id) return;
+    var known = state.has(a.action_id);
+    state.set(a.action_id, Object.assign(state.get(a.action_id)||{}, a));
+    if(!known){ order.push(a.action_id); }
+    // rebuild affected node in place (keeps order)
+    var existing = document.getElementById('node-'+a.action_id);
+    var fresh = buildNode(state.get(a.action_id));
+    if(existing){ existing.replaceWith(fresh); }
+    else { renderAll(); }
+    syncFocusHint();
+  }
+
+  /* ---------- HITL decision ---------- */
+  function decide(id, decision){
+    var li = document.getElementById('node-'+id);
+    if(li){
+      // disable buttons immediately on click
+      li.querySelectorAll('.btn-approve,.btn-deny').forEach(function(b){ b.setAttribute('disabled','disabled'); });
+    }
+    postDecision(id, decision);
+
+    if(decision==='denied'){
+      // reflect denied locally as terminal — NEVER fake done/green
+      var a = state.get(id) || {action_id:id};
+      a.approval = 'denied'; a.status = 'denied';
+      state.set(id, a);
+      upsert(a);
+    } else {
+      // granted: DO NOT optimistically fake done.
+      // Mark approval; wait for stream executing->done. Show interim hint.
+      var b = state.get(id) || {action_id:id};
+      b.approval = 'granted';
+      state.set(id, b);
+      var node = document.getElementById('node-'+id);
+      if(node){
+        var hitl = node.querySelector('.hitl');
+        if(hitl){
+          hitl.outerHTML = '<div class="resolved" style="border-top-color:var(--accent);color:var(--accent)">'+ICON.check+'Freigegeben — warte auf Ausführung im Stream …</div>';
+        }
+      }
+    }
+  }
+
+  function postDecision(id, decision){
+    try{
+      fetch('/actions/'+encodeURIComponent(id)+'/approve', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ decision: decision })
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  /* ---------- keyboard HITL: Enter=Freigeben / Esc=Ablehnen on awaiting node ---------- */
+  function awaitingNode(){
+    for(var i=0;i<order.length;i++){
+      var a = state.get(order[i]);
+      if(a && a.status==='awaiting_approval' && a.approval==null) return a;
+    }
+    return null;
+  }
+  function syncFocusHint(){
+    var any = !!awaitingNode();
+    TL.setAttribute('aria-busy', any ? 'true':'false');
+  }
+  document.addEventListener('keydown', function(ev){
+    if(ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+    var a = awaitingNode();
+    if(!a) return;
+    if(ev.key==='Enter'){ ev.preventDefault(); decide(a.action_id,'granted'); }
+    else if(ev.key==='Escape'){ ev.preventDefault(); decide(a.action_id,'denied'); }
+  });
+
+  /* ---------- fallback render (~1.5s if no live data) ---------- */
+  var fallbackTimer = setTimeout(function(){
+    if(liveSeen) return;
+    order = FALLBACK.map(function(a){ return a.action_id; });
+    state = new Map();
+    FALLBACK.forEach(function(a){ state.set(a.action_id, Object.assign({}, a)); });
+    renderAll();
+    TL.classList.add('fallback');
+    fbNote.classList.add('show');
+  }, 1500);
+
+  /* ---------- live SSE re-hydration ---------- */
+  function applySnapshot(arr){
+    if(!Array.isArray(arr)) return;
+    liveSeen = true;
+    clearTimeout(fallbackTimer);
+    TL.classList.remove('fallback');
+    fbNote.classList.remove('show');
+    state = new Map();
+    order = [];
+    arr.forEach(function(a){ if(a&&a.action_id){ state.set(a.action_id, a); order.push(a.action_id); } });
+    renderAll();
+  }
+  function applyAction(a){
+    liveSeen = true;
+    clearTimeout(fallbackTimer);
+    TL.classList.remove('fallback');
+    fbNote.classList.remove('show');
+    upsert(a);
+  }
+
+  function connect(){
+    if(typeof EventSource === 'undefined') return;
+    var es;
+    try{ es = new EventSource('/events'); }catch(e){ return; }
+
+    es.addEventListener('ping', function(){ /* ignore keepalive */ });
+
+    es.addEventListener('snapshot', function(ev){
+      try{ applySnapshot(JSON.parse(ev.data)); }catch(e){}
+    });
+    es.addEventListener('action', function(ev){
+      try{ applyAction(JSON.parse(ev.data)); }catch(e){}
+    });
+
+    es.onopen = function(){
+      liveText.textContent = 'Live verbunden';
+      liveBadge.style.removeProperty('opacity');
+    };
+    es.onerror = function(){
+      // survive a drop: badge reflects reconnecting; next snapshot re-hydrates wholesale
+      liveText.textContent = 'Verbindung … erneuter Versuch';
+      // EventSource auto-reconnects; on reconnect the server replays a snapshot.
+    };
+  }
+  connect();
+
+  /* ---------- "Nacharbeit starten" -> POST /run, degrade gracefully ---------- */
+  document.getElementById('startBtn').addEventListener('click', function(){
+    runHint.classList.remove('show');
+    liveText.textContent = 'Läuft …';
+    var ok = false;
+    try{
+      fetch('/run', { method:'POST' })
+        .then(function(r){
+          ok = r && r.ok;
+          if(!ok){ degradeRun(); }    // 404 / failure -> inline hint, never fake success
+        })
+        .catch(function(){ degradeRun(); });
+    }catch(e){ degradeRun(); }
+  });
+  function degradeRun(){
+    runHint.classList.add('show');
+    liveText.textContent = 'Live verbunden';
+  }
+})();
+</script>
+</body>
+</html>
