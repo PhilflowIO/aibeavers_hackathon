@@ -216,8 +216,12 @@ export const createContactTool = tool(
       vCardString,
     });
 
-    if (!res.ok) {
-      return `Kontakt konnte nicht angelegt werden (HTTP ${res.status}). Server: ${res.statusText}`;
+    // tsdav gibt normal eine fetch-Response zurück — aber je nach Server/Version
+    // kann das auch ein abweichendes Objekt ohne .ok/.status sein. Defensiv:
+    // nur als Fehler werten, wenn ein eindeutiges Misserfolgs-Signal vorliegt.
+    if (res && typeof res === "object" && "ok" in res && !(res as Response).ok) {
+      const r = res as Response;
+      return `Kontakt konnte nicht angelegt werden (HTTP ${r.status}). Server: ${r.statusText}`;
     }
     return [
       `Kontakt "${name}" im Adressbuch angelegt.`,
