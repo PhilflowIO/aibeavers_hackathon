@@ -25,7 +25,7 @@ def test_persona_contains_key_rules() -> None:
     assert "search_funding" in BERATER_SYSTEM
     assert "get_program" in BERATER_SYSTEM
     # Grounding / no-hallucination line.
-    assert "Erfinde NICHTS" in BERATER_SYSTEM
+    assert "QUELLENBINDUNG" in BERATER_SYSTEM
 
 
 def test_mcp_servers_config_launches_foerder_over_stdio() -> None:
