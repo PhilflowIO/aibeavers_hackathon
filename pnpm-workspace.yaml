@@ -9,9 +9,7 @@ minimumReleaseAge: 0
 verifyDepsBeforeRun: false
 onlyBuiltDependencies:
   - esbuild
-allowBuilds:
-  esbuild: set this to true or false
-  sharp: set this to true or false
+  - sharp
 
 patchedDependencies:
   '@iamsamuelfraga/mcp-pipedrive': patches/@iamsamuelfraga__mcp-pipedrive.patch
