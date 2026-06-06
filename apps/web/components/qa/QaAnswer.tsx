@@ -21,8 +21,8 @@ export function QaAnswer({ response, meetings }: QaAnswerProps) {
       className={[
         "rounded-lg border p-4",
         gedeckt
-          ? "border-zinc-700/80 bg-zinc-900/50"
-          : "border-amber-500/30 bg-amber-500/5",
+          ? "border-zinc-800 bg-zinc-950"
+          : "border-amber-300 bg-amber-50",
       ].join(" ")}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -30,8 +30,8 @@ export function QaAnswer({ response, meetings }: QaAnswerProps) {
           className={[
             "rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
             gedeckt
-              ? "bg-emerald-500/15 text-emerald-300"
-              : "bg-amber-500/15 text-amber-300",
+              ? "bg-emerald-500/15 text-emerald-700"
+              : "bg-amber-500/15 text-amber-800",
           ].join(" ")}
         >
           {gedeckt ? "Gedeckt" : "Nicht gedeckt"}

@@ -14,7 +14,7 @@ export function TranscriptViewer({ meetings }: TranscriptViewerProps) {
 
   if (!meeting) {
     return (
-      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4 text-sm text-zinc-500">
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-500">
         Kein Transkript für diesen Termin.
       </div>
     );
@@ -26,8 +26,8 @@ export function TranscriptViewer({ meetings }: TranscriptViewerProps) {
         <h3 className="text-sm font-medium text-zinc-200">{meeting.titel}</h3>
         <p className="text-xs text-zinc-500">{meeting.datum}</p>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/30 p-2">
-        <div className="flex flex-col gap-2">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950 px-3">
+        <div className="flex flex-col">
           {meeting.segments.map((segment, index) => {
             const highlighted =
               highlightSec !== null &&
