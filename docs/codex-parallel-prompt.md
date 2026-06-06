@@ -6,7 +6,7 @@ Hackathon demo: **Nacharbeits-Agent** for Finanzberater.
 
 ## Your mission (pick Track A first; Track B only if A is done)
 
-**Track A — CRM sandbox execution (primary, most isolated)**  
+**Track A — CRM sandbox execution (primary, most isolated)**
 **Track B — Voice Q&A polish (secondary, UI-only)**
 
 Do **one track per branch**. Do not rescaffold the app.
@@ -89,7 +89,7 @@ PIPEDRIVE_COMPANY_DOMAIN=  # e.g. yourcompany
 
 ### Surgical edit (ONLY file you're allowed to modify outside `crm/`)
 
-**File:** `apps/web/app/api/execute-actions/route.ts`  
+**File:** `apps/web/app/api/execute-actions/route.ts`
 **ONLY** replace the `case "crm_task":` block (lines ~88–98) to call:
 
 ```ts
