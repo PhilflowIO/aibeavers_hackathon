@@ -23,7 +23,7 @@ from qdrant_client import QdrantClient
 
 from foerder.config import DENSE_DIM
 from foerder.embedding import EmbeddingProvider
-from foerder.mcp_server import FundingService, build_server
+from foerder.mcp_server import FundingService, _coerce_filters, build_server
 from foerder.qdrant_store import ChunkPoint, QdrantStore
 from foerder.sparse import GermanSparseEncoder
 
@@ -220,3 +220,22 @@ def test_build_server_without_service_constructs() -> None:
     """build_server() with no service still constructs (lazy backends)."""
     server = build_server()
     assert server is not None
+
+
+def test_coerce_filters_passes_through_dict_and_none() -> None:
+    assert _coerce_filters(None) is None
+    d = {"funding_location": ["Nordrhein-Westfalen", "bundesweit"]}
+    assert _coerce_filters(d) is d
+
+
+def test_coerce_filters_parses_json_string() -> None:
+    # Qwen on the DashScope-compat endpoint emits nested args as a JSON string.
+    parsed = _coerce_filters('{"funding_location": ["Nordrhein-Westfalen", "bundesweit"]}')
+    assert parsed == {"funding_location": ["Nordrhein-Westfalen", "bundesweit"]}
+
+
+def test_coerce_filters_rejects_non_object() -> None:
+    with pytest.raises(ValueError):
+        _coerce_filters("not json")
+    with pytest.raises(ValueError):
+        _coerce_filters("[1, 2, 3]")

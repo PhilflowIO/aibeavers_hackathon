@@ -17,7 +17,9 @@ opens no network or Qdrant connections.
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import threading
 from typing import Any
 
 from fastmcp import FastMCP
@@ -32,6 +34,31 @@ from foerder.sparse import GermanSparseEncoder
 DEFAULT_TRANSPORT = "stdio"
 #: Env var selecting the transport (``stdio`` locally, ``streamable-http`` in Docker).
 TRANSPORT_ENV = "FOERDER_MCP_TRANSPORT"
+
+
+def _coerce_filters(filters: dict[str, list[str]] | str | None) -> dict[str, list[str]] | None:
+    """Accept ``filters`` as a dict or a JSON-encoded string and normalize to a dict.
+
+    Some tool-calling LLMs (observed with Qwen on the DashScope-compatible
+    endpoint) emit nested object arguments as a JSON *string* rather than a real
+    object. The MCP tool contract is the right place to be robust to that: we
+    parse a string back into the documented ``{column: [values]}`` shape, and
+    raise a clear ``ValueError`` if it is neither a dict nor valid JSON object —
+    so the agent gets actionable feedback instead of an opaque schema error.
+    """
+    if filters is None or isinstance(filters, dict):
+        return filters
+    try:
+        parsed = json.loads(filters)
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise ValueError(
+            f"`filters` must be an object/dict or a JSON object string, got: {filters!r}"
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(
+            f"`filters` JSON string must decode to an object, got: {type(parsed).__name__}"
+        )
+    return parsed
 
 
 def _hit_to_dict(hit: ProgramHit) -> dict[str, Any]:
@@ -70,27 +97,41 @@ class FundingService:
         self._encoder = encoder
         self._store = store
         self._detail = detail
+        # FastMCP dispatches concurrent tool calls on a threadpool; an agent may
+        # fire several search_funding calls in one turn. Lazy backend init must
+        # be single-flight, or each thread builds its own embedded QdrantClient
+        # on the same on-disk path and they collide on the storage lock
+        # ("Storage folder ... is already accessed by another instance").
+        self._init_lock = threading.Lock()
 
     # -- lazy backends ---------------------------------------------------------
 
     def _get_provider(self) -> EmbeddingProvider:
         if self._provider is None:
-            self._provider = get_provider()
+            with self._init_lock:
+                if self._provider is None:
+                    self._provider = get_provider()
         return self._provider
 
     def _get_encoder(self) -> GermanSparseEncoder:
         if self._encoder is None:
-            self._encoder = GermanSparseEncoder()
+            with self._init_lock:
+                if self._encoder is None:
+                    self._encoder = GermanSparseEncoder()
         return self._encoder
 
     def _get_store(self) -> QdrantStore:
         if self._store is None:
-            self._store = QdrantStore()
+            with self._init_lock:
+                if self._store is None:
+                    self._store = QdrantStore()
         return self._store
 
     def _get_detail(self) -> DetailStore:
         if self._detail is None:
-            self._detail = DetailStore()
+            with self._init_lock:
+                if self._detail is None:
+                    self._detail = DetailStore()
         return self._detail
 
     # -- tool logic ------------------------------------------------------------
@@ -150,11 +191,11 @@ def build_server(service: FundingService | None = None) -> FastMCP:
     )
     def search_funding(
         query: str,
-        filters: dict[str, list[str]] | None = None,
+        filters: dict[str, list[str]] | str | None = None,
         semantic_weight: float = DEFAULT_SEMANTIC_WEIGHT,
         limit: int = 20,
     ) -> list[dict[str, Any]]:
-        return svc.search_funding(query, filters, semantic_weight, limit)
+        return svc.search_funding(query, _coerce_filters(filters), semantic_weight, limit)
 
     @mcp.tool(
         name="get_program",
