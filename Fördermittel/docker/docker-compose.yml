@@ -35,7 +35,8 @@ services:
       dockerfile: docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       # Explicit, authoritative — overrides whatever is (or isn't) in .env.
       FOERDER_QDRANT_URL: http://qdrant:6333
@@ -50,6 +51,9 @@ services:
     depends_on:
       qdrant:
         condition: service_healthy
+    extra_hosts:
+      # Lets the app container reach a host-running Ollama daemon on Linux.
+      - "host.docker.internal:host-gateway"
     # Default command (foerder-mcp) comes from the image CMD.
 
 volumes:
