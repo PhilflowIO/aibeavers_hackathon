@@ -1,207 +1,1187 @@
 <!doctype html>
+<!--
+  ============================================================================
+  PRODUCTION UI — "Editorial Spine" (FINAL merge: editorial-bold × live-timeline)
+  Product: Nacharbeits-Agent — philflow — AI Beavers Hackathon, Hamburg 2026-06-06
+  ----------------------------------------------------------------------------
+  SYNTHESIS PROVENANCE — base candidate B (winner), grafted with C + A:
+    KEPT (base = candidate B / mockup-editorial-bold identity):
+      - Fully data-driven architecture: ONE render(state) path; live SSE and the
+        ~1.5s fallback flow through the same builder; merge-on-upsert; real
+        connection-down visual state (.live[data-conn="down"]); robust SSE-drop
+        re-hydration from the next snapshot.
+      - Warm editorial palette + tokens (--ink/--paper/--accent #e8410f), --serif
+        display font; sticky .topbar; full .hero (kicker, big serif <h1> with <em>
+        accent, .lede, italic .tagline blockquote); .statstrip (3 stats);
+        .work-head ("Die Nacharbeit – live" + Frau-Schäfer subline); .legend
+        honesty key; footer EU/sovereignty mark.
+      - Serif action title; accent-red HITL/awaiting state; dashed accent divider;
+        btn-primary "Nacharbeit starten" + ghost "Gespräch ansehen".
+      - The editorial @media(prefers-color-scheme:dark) block (NOT donor blue).
+      - .idx (01–05) folded BESIDE the marker (A confirms beside/below reads
+        cleaner on a projector than a corner badge).
+      - Global keyboard handler (Enter=Freigeben / Esc=Ablehnen) with the
+        INPUT/TEXTAREA/BUTTON/A guard — document-scoped, not node-focus-scoped.
+      - HITL grant marks approval ONLY (NO optimistic status='executing');
+        executing->done arrives from the SSE stream, never from the click.
+
+    ADOPTED (donor = mockup-live-timeline, re-skinned to editorial tokens):
+      - Vertical timeline spine: 56px rail column, connecting .rail::after line,
+        round .marker per node, grid .node{grid-template-columns:56px 1fr}.
+      - Status-carrying spine: .done segments tinted --ok; active .flow segment
+        @keyframes flow; HITL marker @keyframes throb RECOLORED to --accent;
+        executing spinner marker; stub marker --warn.
+      - @keyframes rise node-enter with staggered nth-child delays.
+      - Transcript source card at TOP of spine (Transkript → Ableitung → Ausführung).
+      - Executing indeterminate .progress bar.
+
+    GRAFTED FROM CANDIDATE C (honesty core + a11y hardening — highest priority):
+      - resolveVisual(a): a SINGLE guard that early-returns the amber "stub /
+        Vorschau" visual whenever a.real!==true, BEFORE any status branch. Green
+        "echt" is therefore structurally reachable ONLY through the
+        real===true && status==='done' branch — the sacred invariant is
+        unbypassable, not convention-enforced.
+      - Contrast-hardened tokens: light --warn:#8a5200, dark --ink-2:#cbcfdb
+        (both verified >=4.5:1 for tag-warn text on --warn-bg, dim text on paper).
+      - Live status pill min-height:44px (>=44px target), with B's data-conn
+        down-state styling layered on top.
+      - Dedicated sr-only aria-live announce() region + announce() on grant/deny
+        so screen-reader users hear the HITL outcome.
+      - Blanket prefers-reduced-motion block (*,*::before,*::after) merged with the
+        explicit per-element kill list — nothing animates.
+      - .btn[disabled] sets pointer-events:none + opacity (visible & blocked) in
+        addition to the element.disabled property.
+      - After fallback/snapshot render, focus moves once to the awaiting node's
+        Freigeben button (rerender(focusId)) so keyboard users land on the decision.
+
+  Donor's dark-blue (#0a0f1c) / philflow-blue (#4f8cff) theme and "M. Hofmann"
+  identity were fully removed. ONE client = Frau Schäfer · frau.schaefer@example.de.
+
+  HONESTY MODEL (SACRED — enforced in markup AND JS via resolveVisual()):
+    green ✓ "echt"   -> ONLY real===true && status==="done"
+    real===false     -> amber "Vorschau · nächste Integration", terminal,
+                        NEVER a green check, never a spine "done" glow
+    Color is never the sole signal — every status pairs color + icon + text.
+    lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
+
+  DONE-MARKER CHOICE (documented per judge note): on a done node the marker shows
+  the GREEN CHECK status glyph (the brief permits a status glyph on the marker),
+  while the tool-derived meaning is preserved by the monospace tool chip text
+  (e.g. "lookup_foerderung") and the verbatim source block. This is applied
+  consistently for every done node (a1, a2 after stream, a3 after stream).
+  ============================================================================
+-->
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>🦫 Nacharbeits-Agent</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nacharbeits-Agent — philflow</title>
 <style>
-  :root {
-    --bg: #0e1116; --panel: #161b22; --panel2: #1c2230; --border: #2a3240;
-    --text: #e6edf3; --muted: #8b949e; --accent: #d9a441; --green: #3fb950;
-    --red: #f85149; --blue: #58a6ff; --grey: #6e7681;
+  /* ---------- TOKENS (editorial-bold) ---------- */
+  :root{
+    color-scheme: light dark;
+
+    --ink:        #0d0f14;
+    --ink-2:      #2b2f3a;
+    --paper:      #f4f1ea;
+    --paper-2:    #ffffff;
+    --line:       #1a1d24;
+    --hair:       rgba(13,15,20,.12);
+
+    --accent:     #e8410f;   /* editorial red-orange */
+    --accent-ink: #ffffff;
+    --accent-soft:#fbe2d8;
+    --accent-text:#b8330b;   /* darker accent for text on --accent-soft (~4.6:1 on #fbe2d8) */
+
+    --ok:         #0b6f46;   /* echt / green — darkened so tag-ok/chip-ok text >=4.5:1 on --ok-bg (~4.7:1) */
+    --ok-bg:      #d8f0e2;
+    --ok-line:    #0b6f46;
+    --warn:       #8a5200;   /* Vorschau / amber — C's darkened value, >=4.5:1 on --warn-bg */
+    --warn-bg:    #fbe7c2;
+    --warn-line:  #b06a00;
+    --live:       #0b6f46;
+    --run:        #0a4ea3;   /* executing / blue */
+    --run-bg:     #d6e6fb;
+
+    --shadow-1: 0 1px 0 var(--hair);
+    --shadow-2: 0 6px 24px rgba(13,15,20,.10);
+    --shadow-glow: 0 0 0 1px var(--accent), 0 6px 24px rgba(232,65,15,.18);
+
+    --r: 4px;
+    --r-lg: 8px;
+
+    --maxw: 1120px;
+    --t: 200ms cubic-bezier(.2,.7,.3,1);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
-         background: var(--bg); color: var(--text); }
-  header { padding: 18px 28px; border-bottom: 1px solid var(--border);
-           display: flex; align-items: baseline; gap: 14px; }
-  header h1 { font-size: 20px; margin: 0; }
-  header .tag { color: var(--muted); font-size: 13px; }
-  .bar { padding: 16px 28px; display: flex; gap: 10px; flex-wrap: wrap;
-         border-bottom: 1px solid var(--border); align-items: center; }
-  #q { flex: 1; min-width: 320px; background: var(--panel2); border: 1px solid var(--border);
-       color: var(--text); border-radius: 8px; padding: 11px 13px; font-size: 14px; }
-  button { background: var(--accent); color: #1a1205; border: 0; border-radius: 8px;
-           padding: 11px 16px; font-weight: 600; cursor: pointer; font-size: 14px; }
-  button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
-                 font-weight: 500; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px 28px; }
-  .col h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
-            color: var(--muted); margin: 0 0 14px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-          padding: 14px 16px; margin-bottom: 12px; display: flex; gap: 13px; align-items: flex-start;
-          animation: pop .25s ease; }
-  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
-  .ico { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid;
-         place-items: center; font-size: 14px; border: 1px solid var(--border); }
-  .ico.executing { border-color: var(--blue); color: var(--blue); }
-  .ico.done { background: rgba(63,185,80,.15); border-color: var(--green); color: var(--green); }
-  .ico.error, .ico.denied { background: rgba(248,81,73,.15); border-color: var(--red); color: var(--red); }
-  .ico.awaiting_approval { border-color: var(--accent); color: var(--accent); }
-  .ico.stub_preview { color: var(--grey); }
-  .card.await { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-  .gate { display: none; gap: 8px; margin-top: 10px; }
-  .gate button { padding: 7px 14px; font-size: 13px; border-radius: 7px; }
-  .gate .deny { background: var(--panel2); color: var(--red); border: 1px solid var(--red); }
-  .toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px;
-            user-select: none; cursor: pointer; }
-  .spin { width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent;
-          border-radius: 50%; animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .body { flex: 1; min-width: 0; }
-  .row1 { display: flex; align-items: center; gap: 8px; }
-  .tool { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted);
-          background: var(--panel2); padding: 1px 7px; border-radius: 5px; }
-  .pill { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px;
-          border-radius: 20px; }
-  .pill.real { background: rgba(63,185,80,.15); color: var(--green); }
-  .pill.preview { background: rgba(110,118,129,.2); color: var(--muted); }
-  .summary { margin-top: 4px; }
-  .detail { margin-top: 8px; font-family: ui-monospace, monospace; font-size: 11.5px;
-            color: var(--muted); white-space: pre-wrap; max-height: 130px; overflow: auto;
-            background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-            padding: 8px 10px; display: none; }
-  .detail.show { display: block; }
-  .answer { background: linear-gradient(180deg, var(--panel2), var(--panel));
-            border: 1px solid var(--accent); border-radius: 10px; padding: 16px 18px;
-            white-space: pre-wrap; }
-  .empty { color: var(--grey); font-size: 14px; padding: 8px 2px; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--grey);
-         margin-right: 7px; }
-  .dot.live { background: var(--green); box-shadow: 0 0 0 3px rgba(63,185,80,.2); }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:    #f3f0e8;
+      --ink-2:  #cbcfdb;     /* C's lightened value for >=4.5:1 dim text on dark paper */
+      --paper:  #0c0e13;
+      --paper-2:#15181f;
+      --line:   #e8e6df;
+      --hair:   rgba(243,240,232,.16);
+      --accent: #ff5a28;
+      --accent-ink: #1a0d07;
+      --accent-soft:#2e160b;
+      --accent-text:#ff5a28;  /* dark mode: bright accent already 5.46:1 on dark accent-soft */
+      --ok:     #57e0a0; --ok-bg: #0e2e22; --ok-line: #57e0a0;
+      --warn:   #ffc266; --warn-bg: #2f230d; --warn-line: #ffc266;
+      --live:   #57e0a0;
+      --run:    #7db4ff; --run-bg:#10243f;
+      --shadow-2: 0 8px 30px rgba(0,0,0,.5);
+      --shadow-glow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,90,40,.28);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* ---------- FOCUS (never removed) ---------- */
+  :focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:3px;
+    border-radius:3px;
+  }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    border-bottom:2px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:30;
+  }
+  .topbar .row{ display:flex; align-items:center; gap:16px; padding:14px 0; }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo{
+    width:40px; height:40px; flex:0 0 auto;
+    background:var(--ink); color:var(--paper);
+    border-radius:var(--r);
+    display:grid; place-items:center;
+  }
+  @media (prefers-color-scheme: dark){ .logo{ background:var(--accent); color:var(--accent-ink); } }
+  .logo svg{ width:24px; height:24px; }
+  .brand-txt{ display:flex; flex-direction:column; line-height:1.05; min-width:0; }
+  .brand-txt b{ font-size:1.02rem; letter-spacing:.2px; }
+  .brand-txt span{ font-size:.74rem; color:var(--ink-2); letter-spacing:.18em; text-transform:uppercase; }
+  .spacer{ flex:1 1 auto; }
+
+  /* Live indicator (state-driven) — 44px target (C), data-conn down-state (B) */
+  .live{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.82rem; font-weight:700; letter-spacing:.04em;
+    padding:8px 12px; border:1.5px solid var(--ok-line);
+    color:var(--ok); border-radius:999px; background:var(--ok-bg);
+    min-height:44px;
+  }
+  .live[data-conn="down"]{ color:var(--warn); border-color:var(--warn-line); background:var(--warn-bg); }
+  .live[data-conn="down"] .dot{ background:var(--warn); animation:none; }
+  .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--live);
+    box-shadow:0 0 0 0 var(--live);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(12,122,77,.5); }
+    70%{ box-shadow:0 0 0 8px rgba(12,122,77,0); }
+    100%{ box-shadow:0 0 0 0 rgba(12,122,77,0); }
+  }
+
+  /* ---------- HERO (editorial) ---------- */
+  .hero{ padding:54px 0 38px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:.78rem; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--accent);
+  }
+  .kicker .bar{ width:34px; height:3px; background:var(--accent); display:inline-block; }
+
+  .hero h1{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(2.6rem, 7vw, 5.4rem);
+    line-height:.98; letter-spacing:-.02em;
+    margin:.32em 0 .12em; max-width:16ch; text-wrap:balance;
+  }
+  .hero h1 em{ font-style:italic; color:var(--accent); }
+
+  .lede{ font-size:clamp(1.05rem, 2.1vw, 1.45rem); color:var(--ink-2); max-width:60ch; margin:0 0 6px; }
+  .tagline{
+    font-family:var(--serif); font-style:italic;
+    font-size:clamp(1.1rem, 2.2vw, 1.5rem); color:var(--ink);
+    border-left:4px solid var(--accent); padding-left:16px;
+    margin:22px 0 28px; max-width:48ch;
+  }
+
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+
+  .btn{
+    font:inherit; font-weight:800; letter-spacing:.01em;
+    border-radius:var(--r-lg); cursor:pointer;
+    min-height:52px; padding:0 26px;
+    display:inline-flex; align-items:center; gap:10px;
+    border:2px solid transparent;
+    transition:transform var(--t), background var(--t), box-shadow var(--t);
+  }
+  .btn svg{ width:20px; height:20px; }
+  .btn:active{ transform:translateY(2px); }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); font-size:1.05rem; box-shadow:var(--shadow-2); }
+  .btn-primary:hover{ background:#cf3309; }
+  @media (prefers-color-scheme: dark){ .btn-primary:hover{ background:#ff6f43; } }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover{ background:var(--ink); color:var(--paper); }
+
+  .src-pill{ display:inline-flex; align-items:center; gap:8px; font-size:.8rem; color:var(--ink-2); }
+  .src-pill svg{ width:16px; height:16px; flex:0 0 auto; }
+
+  /* inline hint for /run 404 degrade */
+  .run-hint{
+    width:100%; margin:14px 0 0; padding:11px 14px;
+    background:var(--warn-bg); border:1.5px solid var(--warn-line);
+    color:var(--warn); border-radius:var(--r-lg);
+    font-size:.86rem; font-weight:600;
+    display:none; gap:9px; align-items:center;
+  }
+  .run-hint.show{ display:flex; }
+  .run-hint svg{ width:17px; height:17px; flex:0 0 auto; }
+  .run-hint code{ font-family:var(--mono); background:rgba(0,0,0,.08); padding:1px 6px; border-radius:4px; }
+  @media (prefers-color-scheme: dark){ .run-hint code{ background:rgba(255,255,255,.12); } }
+
+  /* Stat strip */
+  .statstrip{ display:grid; grid-template-columns:repeat(3,1fr); border-bottom:2px solid var(--line); }
+  .stat{ padding:18px 4px 22px; }
+  .stat + .stat{ border-left:1px solid var(--hair); padding-left:22px; }
+  .stat b{ display:block; font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); line-height:1; }
+  .stat span{ font-size:.82rem; color:var(--ink-2); }
+  @media (max-width:680px){
+    .statstrip{ grid-template-columns:1fr; }
+    .stat + .stat{ border-left:0; border-top:1px solid var(--hair); padding-left:4px; }
+  }
+
+  /* ---------- WORK SECTION ---------- */
+  .work{ padding:36px 0 64px; }
+  .work-head{ display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:18px; }
+  .work-head h2{ font-family:var(--serif); font-weight:800; font-size:clamp(1.6rem,4vw,2.6rem); line-height:1; margin:0; letter-spacing:-.01em; }
+  .work-head p{ margin:6px 0 0; color:var(--ink-2); font-size:.95rem; }
+
+  /* Legend (persistent honesty key) */
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-radius:var(--r-lg); padding:12px 14px; box-shadow:var(--shadow-1);
+  }
+  .legend .lg{ display:inline-flex; align-items:center; gap:8px; font-size:.83rem; font-weight:600; }
+  .legend .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 9px; border-radius:999px; font-weight:800; font-size:.74rem;
+    letter-spacing:.04em; text-transform:uppercase; border:1.5px solid;
+  }
+  .chip-ok{ color:var(--ok); background:var(--ok-bg); border-color:var(--ok-line); }
+  .chip-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .chip svg{ width:13px; height:13px; }
+  .legend .sep{ color:var(--ink-2); font-weight:400; }
+
+  /* ---------- TRANSCRIPT SOURCE (top of spine) ---------- */
+  .transcript{
+    margin:22px 0 8px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-left:5px solid var(--ink);
+    border-radius:var(--r-lg); padding:16px 20px; box-shadow:var(--shadow-1);
+  }
+  @media (prefers-color-scheme: dark){ .transcript{ border-left-color:var(--accent); } }
+  .transcript-head{
+    display:flex; align-items:center; gap:9px;
+    font-size:.74rem; font-weight:800; color:var(--ink-2);
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .transcript-head svg{ width:15px; height:15px; }
+  .transcript p{
+    margin:9px 0 0; color:var(--ink); font-size:1.02rem;
+    font-family:var(--serif); font-style:italic; line-height:1.55; max-width:70ch;
+  }
+  .transcript .who{ font-style:normal; font-family:var(--sans); font-weight:800; color:var(--ink); margin-right:4px; }
+  .flowmark{
+    margin-top:12px; font-size:.74rem; font-weight:700; letter-spacing:.04em;
+    color:var(--ink-2); display:inline-flex; align-items:center; gap:8px;
+  }
+  .flowmark svg{ width:14px; height:14px; }
+
+  /* ---------- THE SPINE (donor mechanic, editorial skin) ---------- */
+  .timeline{ list-style:none; margin:22px 0 0; padding:0; position:relative; }
+
+  .node{
+    position:relative; display:grid;
+    grid-template-columns:56px 1fr; gap:18px;
+    padding-bottom:18px;
+    animation:rise 420ms cubic-bezier(.16,.84,.44,1) both;
+  }
+  .node:last-child{ padding-bottom:0; }
+  .node:nth-child(1){ animation-delay:.02s; }
+  .node:nth-child(2){ animation-delay:.10s; }
+  .node:nth-child(3){ animation-delay:.18s; }
+  .node:nth-child(4){ animation-delay:.26s; }
+  .node:nth-child(5){ animation-delay:.34s; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+
+  /* rail + connecting spine segment */
+  .rail{ position:relative; display:flex; flex-direction:column; align-items:center; }
+  .idx{
+    font-family:var(--serif); font-weight:800; font-size:.92rem;
+    color:var(--ink-2); opacity:.7; margin-bottom:6px; line-height:1;
+  }
+  .rail::after{
+    content:""; position:absolute;
+    top:64px; bottom:-12px; left:50%;
+    width:3px; transform:translateX(-50%);
+    background:var(--hair); border-radius:2px;
+  }
+  .node:last-child .rail::after{ display:none; }
+  .node.done .rail::after{ background:linear-gradient(180deg, var(--ok-line), var(--hair)); }
+  .node.flow .rail::after{
+    background:linear-gradient(180deg, var(--accent), var(--hair));
+    background-size:100% 200%; animation:flow 1.6s linear infinite;
+  }
+  @keyframes flow{ 0%{ background-position:0 -40px; } 100%{ background-position:0 40px; } }
+
+  /* node marker */
+  .marker{
+    width:46px; height:46px; flex:none; border-radius:50%;
+    display:grid; place-items:center;
+    background:var(--paper-2); border:2px solid var(--hair);
+    color:var(--ink-2); z-index:1; box-shadow:var(--shadow-1);
+  }
+  .marker svg{ width:21px; height:21px; }
+  .node.done .marker{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok); }
+  .node.hitl .marker{
+    background:var(--accent-soft); border-color:var(--accent); color:var(--accent);
+    box-shadow:var(--shadow-glow); animation:throb 2s ease-in-out infinite;
+  }
+  @keyframes throb{
+    0%,100%{ box-shadow:0 0 0 1px var(--accent), 0 0 0 rgba(232,65,15,0); }
+    50%{ box-shadow:0 0 0 1px var(--accent), 0 0 22px rgba(232,65,15,.45); }
+  }
+  .node.exec .marker{ background:var(--run-bg); border-color:var(--run); color:var(--run); }
+  .node.stub .marker{ background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn); }
+  .marker .spin{ animation:spin 1.1s linear infinite; transform-origin:center; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- ACTION CARD ---------- */
+  .card{
+    background:var(--paper-2);
+    border:1.5px solid var(--hair); border-left:5px solid var(--hair);
+    border-radius:var(--r-lg); padding:18px 20px;
+    box-shadow:var(--shadow-1);
+    transition:box-shadow var(--t), border-color var(--t);
+  }
+  .node.done .card{ border-left-color:var(--ok-line); }
+  .node.hitl .card{ border-left-color:var(--accent); box-shadow:var(--shadow-2); }
+  .node.exec .card{ border-left-color:var(--run); }
+  .node.stub .card{ border-left-color:var(--warn-line); }
+
+  .card-top{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; }
+  .tool{
+    font-family:var(--mono); font-size:.74rem; letter-spacing:.02em; color:var(--ink-2);
+    background:var(--paper); border:1px solid var(--hair); padding:2px 7px; border-radius:var(--r);
+  }
+  .summary{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(1.05rem,1.7vw,1.35rem); line-height:1.2;
+    flex:1 1 100%; order:3; margin:4px 0 0;
+  }
+
+  /* status tags (color + text + icon) */
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font-weight:800;
+    font-size:.74rem; letter-spacing:.05em; text-transform:uppercase;
+    border:1.5px solid; margin-left:auto; order:2;
+  }
+  .tag svg{ width:13px; height:13px; }
+  .tag-ok{   color:var(--ok);   background:var(--ok-bg);   border-color:var(--ok-line); }
+  .tag-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .tag-run{  color:var(--run);  background:var(--run-bg);  border-color:var(--run); }
+  .tag-wait{ color:var(--accent-text); background:var(--accent-soft); border-color:var(--accent); }
+
+  .detail{ font-size:.9rem; color:var(--ink-2); margin:10px 0 0; }
+  .detail strong{ color:var(--ink); }
+
+  /* source proof (lookup_foerderung verbatim) */
+  .source{
+    margin-top:10px; padding:10px 12px;
+    background:var(--ok-bg); border:1px dashed var(--ok-line);
+    border-radius:var(--r); font-size:.84rem;
+    display:flex; gap:9px; align-items:flex-start;
+  }
+  .source svg{ width:16px; height:16px; flex:0 0 auto; color:var(--ok); margin-top:2px; }
+  .source .lbl{ font-weight:800; color:var(--ok); display:block; text-transform:uppercase; letter-spacing:.05em; font-size:.72rem; }
+  .source a{ color:var(--ink); word-break:break-all; text-decoration:underline; text-underline-offset:2px; font-family:var(--mono); font-size:.8rem; }
+
+  /* executing indeterminate progress */
+  .progress{ margin-top:12px; height:6px; border-radius:999px; background:var(--run-bg); overflow:hidden; }
+  .progress > i{
+    display:block; height:100%; width:40%; border-radius:999px;
+    background:linear-gradient(90deg, transparent, var(--run), transparent);
+    animation:indet 1.4s ease-in-out infinite;
+  }
+  @keyframes indet{ 0%{ transform:translateX(-120%); } 100%{ transform:translateX(320%); } }
+
+  .modelline{ margin-top:12px; font-size:.74rem; color:var(--ink-2); display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+  .modelline svg{ width:14px; height:14px; }
+  .modelline b{ font-family:var(--mono); font-weight:700; color:var(--ink); }
+  .modelline .sep{ opacity:.5; }
+
+  /* HITL controls — editorial dashed accent divider */
+  .hitl{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  }
+  .hitl .q{ font-weight:800; font-size:.92rem; flex:1 1 220px; display:flex; align-items:center; gap:9px; }
+  .hitl .q svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent); }
+  .hitl .grp{ display:flex; gap:10px; }
+  .btn-approve, .btn-deny{
+    font:inherit; font-weight:800; border-radius:var(--r-lg);
+    display:inline-flex; align-items:center; justify-content:center; gap:9px; cursor:pointer;
+    min-height:48px; min-width:44px; padding:0 22px; font-size:1rem; border:2px solid;
+    transition:transform var(--t), filter var(--t), background var(--t), color var(--t);
+  }
+  .btn-approve{ background:var(--ok); color:#fff; border-color:var(--ok); }
+  @media (prefers-color-scheme: dark){ .btn-approve{ color:#042018; } }
+  .btn-approve:hover{ filter:brightness(1.08); }
+  .btn-deny{ background:transparent; color:var(--ink); border-color:var(--line); padding:0 20px; }
+  .btn-deny:hover{ background:var(--ink); color:var(--paper); }
+  .btn-approve:active, .btn-deny:active{ transform:translateY(2px); }
+  .btn-approve svg, .btn-deny svg{ width:18px; height:18px; }
+  /* disabled = visible AND operable-blocked (C's pointer-events + B's .disabled prop) */
+  .btn-approve[disabled], .btn-deny[disabled],
+  .btn-approve:disabled, .btn-deny:disabled{
+    opacity:.5; cursor:default; pointer-events:none; filter:none; transform:none;
+  }
+
+  /* terminal-decision line (denied / granted-pending) */
+  .decision{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    font-weight:800; font-size:.92rem; display:flex; align-items:center; gap:9px;
+  }
+  .decision svg{ width:18px; height:18px; flex:0 0 auto; }
+  .decision.denied{ color:var(--warn); border-top-color:var(--warn-line); }
+  .decision.granted{ color:var(--ok); }
+
+  /* fallback dimming until live arrives */
+  .timeline.fallback{ opacity:.62; }
+  .fallback-note{
+    display:none; align-items:center; gap:8px;
+    margin:14px 0 0; font-size:.8rem; color:var(--ink-2);
+  }
+  .fallback-note.show{ display:inline-flex; }
+  .fallback-note svg{ width:14px; height:14px; }
+
+  footer{
+    border-top:2px solid var(--line); padding:22px 0 40px;
+    color:var(--ink-2); font-size:.82rem;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  footer .eu{ display:inline-flex; align-items:center; gap:8px; font-weight:700; color:var(--ink); }
+  footer .eu svg{ width:18px; height:18px; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+  /* ---------- AGENT ANSWER PANEL (editorial) ---------- */
+  .answer-wrap{ padding:0 24px 8px; }
+  .answer-wrap[hidden]{ display:none; }
+  .answer-wrap .answer-card{
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-left:5px solid var(--accent);
+    border-radius:var(--r-lg); padding:18px 22px; box-shadow:var(--shadow-1);
+    margin:8px 0 18px;
+  }
+  .answer-wrap h2{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(1.4rem,3.2vw,2.1rem); line-height:1.05;
+    letter-spacing:-.01em; margin:0 0 8px;
+  }
+  .answer-wrap #answerBody{
+    font-family:var(--serif); font-size:1.05rem; line-height:1.55;
+    color:var(--ink); white-space:pre-wrap; max-width:70ch;
+  }
+  .answer-wrap.error .answer-card{ border-left-color:var(--warn-line); }
+  .answer-wrap.error #answerBody{ color:var(--warn); }
+
+  /* ---------- REDUCED MOTION — C's blanket block merged with B's explicit kill list ---------- */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.001ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;
+    }
+    .dot, .node, .node.flow .rail::after, .node.hitl .marker, .marker .spin, .progress > i{
+      animation:none !important;
+    }
+    .progress > i{ width:100%; opacity:.5; }
+    .btn:active, .btn-approve:active, .btn-deny:active{ transform:none; }
+  }
+
+  @media (max-width:560px){
+    .node{ grid-template-columns:44px 1fr; gap:12px; }
+    .marker{ width:40px; height:40px; }
+    .rail::after{ top:58px; }
+    .hero-actions{ gap:10px; }
+    .btn-primary{ width:100%; justify-content:center; }
+  }
 </style>
 </head>
 <body>
-  <header>
-    <h1>🦫 Nacharbeits-Agent</h1>
-    <span class="tag">Der Finanzberater closed im Gespräch. Die Nacharbeit erledigt der Agent.</span>
-    <span style="margin-left:auto" class="tag"><span class="dot" id="livedot"></span><span id="status">bereit</span></span>
-  </header>
 
-  <div class="bar">
-    <input id="q" placeholder="Anweisung an den Agenten…" />
-    <button id="run">Ausführen</button>
-    <label class="toggle" title="Human-in-the-loop: vor echten Aktionen nachfragen">
-      <input type="checkbox" id="hitl" checked /> HITL-Freigabe
-    </label>
-    <button class="ghost" data-demo="Lies meine letzten 3 E-Mails und fasse sie kurz zusammen.">Demo: Posteingang</button>
-    <button class="ghost" data-demo="Lege am 12.06.2026 um 10:00 einen 45-minütigen Folgetermin Riester-Nachberatung an und schicke die Kalender-Einladung an aibeavers@philflow.io.">Demo: Folgetermin + Einladung</button>
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="wrap row">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h18M5 7l1.5 10h11L19 7M9 12h6"/>
+        </svg>
+      </span>
+      <span class="brand-txt">
+        <b>Nacharbeits-Agent</b>
+        <span>philflow · finance</span>
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <span class="live" id="conn" data-conn="up" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="connText">Live verbunden</span>
+    </span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero wrap" aria-labelledby="h1">
+    <span class="kicker"><span class="bar" aria-hidden="true"></span>Nach dem Kundengespräch</span>
+    <h1 id="h1">Andere geben dir ein Protokoll. Wir geben dir deinen <em>Feierabend</em> zurück.</h1>
+    <p class="lede">
+      Klassische Notetaker liefern eine Liste. Dieser Agent <strong>erledigt</strong> die regulierte
+      Nacharbeit: Folgetermin buchen, Unterlagen-Mail schreiben, Förderung mit Quelle vorschlagen –
+      jeder Schritt mit deiner Freigabe.
+    </p>
+    <p class="tagline">„Belegt, nicht geraten.“ Souverän in der EU gehostet – Finanzdaten bleiben, wo sie hingehören.</p>
+
+    <div class="hero-actions">
+      <button class="btn btn-primary" id="startBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Nacharbeit starten
+      </button>
+      <button class="btn btn-ghost" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Gespräch ansehen
+      </button>
+      <span class="src-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        §34d/§34f-konform · EU-lokal
+      </span>
+      <p class="run-hint" id="runHint" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>
+        <span>Kein Backend erreichbar – starte mit <code>pnpm ui</code> oder dem Mock <code>node scripts/mock-ui-server.mjs</code>.</span>
+      </p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="statstrip" aria-hidden="true">
+      <div class="stat"><b>5</b><span>Aktionen pro Gespräch</span></div>
+      <div class="stat"><b>2&nbsp;Klicks</b><span>menschliche Freigabe (HITL)</span></div>
+      <div class="stat"><b>100&nbsp;%</b><span>EU-gehostet · qwen-7b@eu-vllm</span></div>
+    </div>
   </div>
 
-  <main>
-    <div class="col">
-      <h2>Plan — ausgeführte Aktionen</h2>
-      <div id="actions"><div class="empty">Noch keine Aktion. Starte den Agenten oben.</div></div>
+  <!-- ============ WORK / LIVE SPINE ============ -->
+  <section class="work wrap" aria-labelledby="workh">
+    <div class="work-head">
+      <div>
+        <h2 id="workh">Die Nacharbeit – live</h2>
+        <p>Frau Schäfer · Altersvorsorge &amp; Sanierung · heute 11:20 Uhr</p>
+      </div>
+      <div class="legend" role="note" aria-label="Legende zur Ehrlichkeit der Aktionen">
+        <span class="lg">
+          <span class="chip chip-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>echt</span>
+          Mail · Kalender · Förderung mit Quelle
+        </span>
+        <span class="sep" aria-hidden="true">|</span>
+        <span class="lg">
+          <span class="chip chip-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>Vorschau</span>
+          Stub – noch nicht verdrahtet
+        </span>
+      </div>
     </div>
-    <div class="col">
-      <h2>Antwort des Agenten</h2>
-      <div id="answer" class="empty">—</div>
-    </div>
-  </main>
+
+    <!-- TRANSCRIPT SOURCE — causality anchor (top of spine) -->
+    <section class="transcript" aria-label="Gesprächs-Transkript">
+      <div class="transcript-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+        Gespräch erfasst · Quelle der Aktionen
+      </div>
+      <p><span class="who">Berater:</span> „…dann lassen Sie uns das mit der KfW-Förderung für die energetische Sanierung prüfen, Frau Schäfer, wir machen einen Folgetermin und ich schicke Ihnen die Unterlagen per Mail.“</p>
+      <span class="flowmark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Transkript → Ableitung → Ausführung
+      </span>
+    </section>
+
+    <ol class="timeline" id="list" aria-label="Nacharbeits-Aktionen (Live-Stream)" aria-live="polite" aria-busy="false"></ol>
+
+    <span class="fallback-note" id="fallbackNote" role="status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      Demo-Vorschau – wartet auf Live-Stream (überschreibt sich beim ersten Ereignis).
+    </span>
+  </section>
+</main>
+
+<section id="answerWrap" class="answer-wrap wrap" hidden aria-labelledby="answerH">
+  <div class="answer-card">
+    <h2 id="answerH">Antwort des Agenten</h2>
+    <div id="answerBody"></div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span class="eu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+    Souverän · EU-lokal gehostet
+  </span>
+  <span>finance.philflow.io · AI Beavers Hackathon Hamburg · 2026-06-06</span>
+</footer>
 
 <script>
-  const actionsEl = document.getElementById("actions");
-  const answerEl = document.getElementById("answer");
-  const statusEl = document.getElementById("status");
-  const liveDot = document.getElementById("livedot");
-  const qEl = document.getElementById("q");
-  const runBtn = document.getElementById("run");
-  const cards = new Map();
-  let firstAction = true;
+"use strict";
+(function(){
+  /* =========================================================================
+     ONE render(state) builds every node from data — live SSE and the ~1.5s
+     fallback share exactly this code path. State is a Map keyed by action_id.
+     The honesty invariant is enforced by resolveVisual() (grafted from C):
+     a single guard that early-returns the amber "stub" visual whenever
+     real!==true, BEFORE any status branch. The green "echt" visual is therefore
+     structurally reachable ONLY through real===true && status==='done'.
+     ========================================================================= */
 
-  function setStatus(s, live) {
-    statusEl.textContent = s;
-    liveDot.classList.toggle("live", !!live);
+  var MODEL = "qwen-7b@eu-vllm";
+
+  /* Canonical "Nacharbeit starten" instruction — sent verbatim to POST /run. */
+  var CANON = "Nacharbeit für das Beratungsgespräch mit Frau Schäfer (Altersvorsorge & energetische Sanierung): passende KfW-Förderung mit Quelle prüfen, Folgetermin am Mittwoch 14:00 vorschlagen, nach Freigabe die Unterlagen-Mail senden, CRM aktualisieren und ein Ticket anlegen.";
+
+  var listEl    = document.getElementById("list");
+  var connEl    = document.getElementById("conn");
+  var connText  = document.getElementById("connText");
+  var runHint   = document.getElementById("runHint");
+  var fbNote    = document.getElementById("fallbackNote");
+  var startBtn  = document.getElementById("startBtn");
+  var answerWrap = document.getElementById("answerWrap");
+  var answerBody = document.getElementById("answerBody");
+
+  /* Show the agent's final answer (or an error) in the editorial answer panel.
+     textContent only — never innerHTML — so stream text cannot inject markup. */
+  function showAnswer(text, isError){
+    answerBody.textContent = String(text == null ? "" : text);
+    answerWrap.classList.toggle("error", isError === true);
+    answerWrap.hidden = false;
   }
 
-  function icon(status) {
-    if (status === "executing") return '<span class="spin"></span>';
-    if (status === "done") return "✓";
-    if (status === "error" || status === "denied") return "✗";
-    if (status === "awaiting_approval") return "?";
-    return "◐";
+  var state = new Map();   // action_id -> action object
+  var order = [];          // preserves arrival order for stable spine
+  var liveReceived = false;
+  var isFallback = false;
+
+  /* ----- dedicated sr-only aria-live region for HITL outcomes (from C) ----- */
+  var srRegion = document.createElement("div");
+  srRegion.className = "sr-only";
+  srRegion.setAttribute("role", "status");
+  srRegion.setAttribute("aria-live", "polite");
+  document.body.appendChild(srRegion);
+  function announce(msg){
+    srRegion.textContent = "";
+    setTimeout(function(){ srRegion.textContent = msg; }, 30);
   }
 
-  function approve(id, decision) {
-    fetch("/approve", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id, decision }),
-    });
-  }
-
-  function upsert(a) {
-    if (firstAction) { actionsEl.innerHTML = ""; firstAction = false; }
-    let card = cards.get(a.id);
-    if (!card) {
-      card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML =
-        '<div class="ico"></div><div class="body">' +
-        '<div class="row1"><span class="tool"></span><span class="pill"></span></div>' +
-        '<div class="summary"></div><div class="gate"></div><div class="detail"></div></div>';
-      card.querySelector(".detail").addEventListener("click", () =>
-        card.querySelector(".detail").classList.toggle("show"));
-      actionsEl.appendChild(card);
-      cards.set(a.id, card);
+  /* ----- icon library (inline SVG, tool-appropriate) ----- */
+  function ic(name){
+    var P = 'fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"';
+    switch(name){
+      case "calendar": return '<svg viewBox="0 0 24 24" '+P+'><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>';
+      case "mail":     return '<svg viewBox="0 0 24 24" '+P+'><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+      case "search":   return '<svg viewBox="0 0 24 24" '+P+'><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+      case "crm":      return '<svg viewBox="0 0 24 24" '+P+'><path d="M3 5c0-1.1 4-2 9-2s9 .9 9 2-4 2-9 2-9-.9-9-2z"/><path d="M3 5v14c0 1.1 4 2 9 2s9-.9 9-2V5"/><path d="M3 12c0 1.1 4 2 9 2s9-.9 9-2"/></svg>';
+      case "ticket":   return '<svg viewBox="0 0 24 24" '+P+'><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
+      case "check":    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      case "cross":    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+      case "clock":    return '<svg viewBox="0 0 24 24" '+P+'><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      case "spinner":  return '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/><path d="M12 3a9 9 0 0 1 9 9" opacity=".25"/></svg>';
+      case "eye":      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+      case "person":   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+      case "link":     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>';
+      case "chip":     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>';
+      default:         return '';
     }
-    card.querySelector(".ico").className = "ico " + a.status;
-    card.querySelector(".ico").innerHTML = icon(a.status);
-    card.querySelector(".tool").textContent = a.tool;
-    const pill = card.querySelector(".pill");
-    pill.textContent = a.real ? "ECHT" : "VORSCHAU";
-    pill.className = "pill " + (a.real ? "real" : "preview");
-    card.querySelector(".summary").textContent = a.summary;
-    const det = card.querySelector(".detail");
-    if (a.detail) { det.textContent = a.detail; }
-
-    const gate = card.querySelector(".gate");
-    if (a.status === "awaiting_approval") {
-      card.classList.add("await");
-      gate.style.display = "flex";
-      gate.innerHTML =
-        '<button class="appr">✓ Genehmigen</button><button class="deny">✗ Ablehnen</button>';
-      gate.querySelector(".appr").onclick = () => { approve(a.id, "granted"); gate.style.display = "none"; };
-      gate.querySelector(".deny").onclick = () => { approve(a.id, "denied"); gate.style.display = "none"; };
-    } else {
-      card.classList.remove("await");
-      gate.style.display = "none";
-      gate.innerHTML = "";
-    }
   }
-
-  const es = new EventSource("/events");
-  es.onmessage = (e) => {
-    const m = JSON.parse(e.data);
-    if (m.kind === "run_start") {
-      cards.clear(); firstAction = true;
-      actionsEl.innerHTML = '<div class="empty">Agent plant…</div>';
-      answerEl.className = "empty"; answerEl.textContent = "…";
-      setStatus("läuft", true); runBtn.disabled = true;
-    } else if (m.kind === "action") {
-      upsert(m.action);
-    } else if (m.kind === "answer") {
-      answerEl.className = "answer"; answerEl.textContent = m.text || "(keine Textantwort)";
-    } else if (m.kind === "error") {
-      answerEl.className = "answer"; answerEl.style.borderColor = "var(--red)";
-      answerEl.textContent = "Fehler: " + m.message;
-    } else if (m.kind === "run_end") {
-      setStatus("fertig", false); runBtn.disabled = false;
-    }
+  var TOOL_ICON = {
+    lookup_foerderung:"search", create_calendar_event:"calendar",
+    send_mail:"mail", crm_upsert:"crm", create_ticket:"ticket"
   };
-  es.onerror = () => setStatus("Verbindung getrennt", false);
 
-  async function run(instruction) {
-    if (!instruction) return;
-    await fetch("/run", {
-      method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ instruction, hitl: document.getElementById("hitl").checked }),
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]; }); }
+
+  /* =========================================================================
+     THE HONESTY GUARD — single source of truth for a node's rendered visual.
+     EARLY-RETURN (from C): real!==true is forced to terminal amber "Vorschau"
+     BEFORE any status branch is consulted. No caller can produce a green/done
+     visual for a non-real action; status==='done' without real===true never
+     reaches the 'done' branch. This makes the sacred invariant unbypassable.
+     ========================================================================= */
+  function resolveVisual(a){
+    if(a.real !== true){
+      // ANY non-real action -> terminal amber, regardless of status.
+      return { node:"stub", tag:"tag-warn", tagIcon:ic("eye"),
+               tagText:"Vorschau · nächste Integration", kind:"stub" };
+    }
+    if(a.status === "done")
+      return { node:"done", tag:"tag-ok", tagIcon:ic("check"),
+               tagText:"echt · erledigt", kind:"done" };
+    if(a.status === "executing")
+      return { node:"exec flow", tag:"tag-run", tagIcon:ic("spinner"),
+               tagText:"läuft …", kind:"exec" };
+    if(a.status === "awaiting_approval" && a.approval == null)
+      return { node:"hitl flow", tag:"tag-wait", tagIcon:ic("clock"),
+               tagText:"Freigabe nötig", kind:"hitl" };
+    if(a.approval === "denied")
+      return { node:"", tag:"tag-warn", tagIcon:ic("cross"),
+               tagText:"abgelehnt", kind:"denied" };
+    // pending / unknown real action
+    return { node:"", tag:"tag-wait", tagIcon:ic("clock"),
+             tagText:"in Arbeit", kind:"pending" };
+  }
+
+  /* marker glyph — done uses the green CHECK status glyph (documented choice);
+     exec=spinner, denied=cross, all others use the tool-appropriate icon so the
+     tool meaning is still carried by the marker for hitl/stub/pending. */
+  function markerIconOf(kind, tool){
+    if(kind === "done")   return ic("check");
+    if(kind === "exec")   return ic("spinner");
+    if(kind === "denied") return ic("cross");
+    return ic(TOOL_ICON[tool] || "chip");
+  }
+
+  /* ----- the single node builder (data -> DOM) ----- */
+  function buildNode(a, idx){
+    var v = resolveVisual(a);
+    var li = document.createElement("li");
+    li.className = "node" + (v.node ? " " + v.node : "");
+    li.id = "row-" + a.action_id;
+    li.setAttribute("data-action-id", a.action_id);
+    li.setAttribute("data-status", a.status || "");
+    li.setAttribute("data-real", a.real === true ? "true" : "false");
+    li.setAttribute("data-kind", v.kind);
+
+    var num = ("0"+(idx+1)).slice(-2);
+
+    // ---- TAG (color + icon + text — never color alone) ----
+    var tag = '<span class="tag '+v.tag+'">'+v.tagIcon+esc(v.tagText)+'</span>';
+
+    // ---- SOURCE (lookup_foerderung surfaces action.source verbatim) ----
+    var sourceHtml = "";
+    if(a.tool === "lookup_foerderung" && a.source){
+      // esc() blocks quote-breakout but NOT javascript:/data: schemes — allowlist
+      // http(s) only on the href; the verbatim source text is still displayed.
+      var href = a.source_href || a.source;
+      if(!/^https?:\/\//i.test(href)) href = "#";
+      sourceHtml =
+        '<div class="source">'+ic("link")+
+        '<span><span class="lbl">Quelle · belegt, nicht geraten</span>'+
+        '<a href="'+esc(href)+'" target="_blank" rel="noopener">'+esc(a.source)+'</a></span></div>';
+    }
+
+    // ---- DETAIL ----
+    // Only the baked, locally-trusted FALLBACK objects (a._trusted===true) may
+    // embed <strong>/<em>. ANY detail arriving over the SSE stream is escaped, so
+    // a malicious/buggy event (e.g. detail:"<img src=x onerror=...>") cannot inject
+    // raw HTML. Do NOT set _trusted on stream data.
+    var detailHtml = a.detail
+      ? '<p class="detail">'+(a._trusted === true ? a.detail : esc(a.detail))+'</p>'
+      : "";
+
+    // ---- EXECUTING progress ----
+    var progHtml = (v.kind === "exec")
+      ? '<div class="progress" aria-hidden="true"><i></i></div>' : "";
+
+    // ---- HITL / decision region ----
+    var hitlHtml = "";
+    if(v.kind === "hitl"){
+      hitlHtml =
+        '<div class="hitl">'+
+          '<span class="q">'+ic("person")+esc(a.prompt||"Mensch entscheidet – diese Aktion ist echt. Jetzt freigeben?")+'</span>'+
+          '<div class="grp">'+
+            '<button class="btn-approve" type="button" data-approve="'+esc(a.action_id)+'">'+ic("check")+'Freigeben</button>'+
+            '<button class="btn-deny" type="button" data-deny="'+esc(a.action_id)+'">'+ic("cross")+'Ablehnen</button>'+
+          '</div>'+
+        '</div>';
+    } else if(v.kind === "denied"){
+      hitlHtml = '<div class="decision denied">'+ic("cross")+'Abgelehnt – keine Ausführung. Kein Schreibzugriff erfolgt.</div>';
+    } else if(a.real === true && (v.kind === "exec" || v.kind === "pending") && a.approval === "granted" && a.status !== "done"){
+      // granted but stream has not advanced to done -> pending line, NO green check.
+      // HARDENED: gated on real===true AND v.kind (exec/pending) so a hostile/buggy
+      // snapshot ({real:false,...}) can never render the green check glyph here.
+      // This keeps the invariant ('green check ONLY for real===true && status==="done"')
+      // unbypassable even via an untrusted SSE snapshot — not just the grant() click path.
+      hitlHtml = '<div class="decision granted">'+ic("check")+'Freigegeben – Ausführung läuft …</div>';
+    }
+
+    // ---- model footnote with per-kind context ----
+    var footMeta = "";
+    if(v.kind === "done")   footMeta = '<span class="sep">·</span><span>kein weiterer Schritt nötig</span>';
+    if(v.kind === "hitl")   footMeta = '<span class="sep">·</span><span>HITL erforderlich</span>';
+    if(v.kind === "exec")   footMeta = '<span class="sep">·</span><span>HITL freigegeben</span>';
+    if(v.kind === "stub")   footMeta = '<span class="sep">·</span><span>kein echter Schreibzugriff</span>';
+    if(v.kind === "denied") footMeta = '<span class="sep">·</span><span>vom Menschen gestoppt</span>';
+    if(a.hitl_note)         footMeta = '<span class="sep">·</span><span>'+esc(a.hitl_note)+'</span>';
+
+    li.innerHTML =
+      '<div class="rail" aria-hidden="true">'+
+        '<span class="idx">'+num+'</span>'+
+        '<span class="marker">'+markerIconOf(v.kind, a.tool)+'</span>'+
+      '</div>'+
+      '<article class="card">'+
+        '<div class="card-top">'+
+          '<span class="tool">'+esc(a.tool)+'</span>'+
+          tag+
+          '<h3 class="summary">'+esc(a.summary)+'</h3>'+
+        '</div>'+
+        detailHtml + sourceHtml + progHtml + hitlHtml +
+        '<span class="modelline">'+ic("chip")+'Modell <b>'+esc(a.llm_model||MODEL)+'</b>'+footMeta+'</span>'+
+      '</article>';
+    return li;
+  }
+
+  /* ----- render(state): wholesale rebuild from the Map (one path for all) -----
+     focusId (optional): after build, move focus once to that node's Freigeben
+     button so keyboard users land on the decision (C's rerender(focusId)). */
+  function render(focusId){
+    listEl.setAttribute("aria-busy","true");
+    listEl.classList.toggle("fallback", isFallback && !liveReceived);
+    fbNote.classList.toggle("show", isFallback && !liveReceived);
+
+    var frag = document.createDocumentFragment();
+    order.forEach(function(id, i){
+      var a = state.get(id);
+      if(a) frag.appendChild(buildNode(a, i));
+    });
+    listEl.replaceChildren(frag);
+    listEl.setAttribute("aria-busy","false");
+    wireHitl();
+
+    if(focusId){
+      var btn = document.querySelector('#row-'+cssEsc(focusId)+' .btn-approve');
+      if(btn){ try{ btn.focus(); }catch(e){} }
+    }
+  }
+  function cssEsc(s){
+    if(window.CSS && CSS.escape) return CSS.escape(String(s));
+    return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  }
+
+  /* ----- find the single awaiting node id, if any ----- */
+  function awaitingId(){
+    var found = null;
+    order.some(function(id){
+      var a = state.get(id);
+      if(a && a.real === true && a.status === "awaiting_approval" && a.approval == null){ found = id; return true; }
+      return false;
+    });
+    return found;
+  }
+
+  /* ----- normalize a server ActionEvent for the action_id-keyed store -----
+     The real backend keys actions on `id`; the renderer/upsert key on
+     `action_id`. Return a shallow copy that adds action_id (from .id) when
+     missing, preserving every other field verbatim. */
+  function normalize(a){
+    if(!a || typeof a !== "object") return a;
+    var copy = Object.assign({}, a);
+    if(copy.action_id == null && copy.id != null) copy.action_id = copy.id;
+    return copy;
+  }
+
+  /* ----- upsert one action by action_id (event "action") ----- */
+  function upsert(a){
+    if(!a || a.action_id == null) return;
+    if(!state.has(a.action_id)) order.push(a.action_id);
+    // merge so partial updates (e.g. status flip) keep prior fields
+    state.set(a.action_id, Object.assign({}, state.get(a.action_id)||{}, a));
+  }
+
+  /* ----- wholesale re-hydrate (event "snapshot") ----- */
+  function hydrate(arr){
+    if(!Array.isArray(arr)) return;
+    state = new Map();
+    order = [];
+    arr.forEach(upsert);
+  }
+
+  /* =========================================================================
+     HITL — POST decision; NO optimistic green. Buttons disabled on click.
+     grant -> mark approval='granted' ONLY (status untouched); the
+     executing->done transition comes from the SSE stream, never the click.
+     deny -> terminal locally.
+     ========================================================================= */
+  function postDecision(id, decision){
+    return fetch("/approve", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({id: id, decision: decision})
+    }).catch(function(){ /* offline demo: state still advances locally below */ });
+  }
+
+  function disableHitlButtons(node){
+    if(!node) return;
+    node.querySelectorAll("button[data-approve],button[data-deny]").forEach(function(b){
+      b.disabled = true;                 // B: element.disabled property
+      b.setAttribute("disabled","disabled"); // C: attribute for [disabled] CSS (pointer-events/opacity)
     });
   }
-  runBtn.onclick = () => run(qEl.value.trim());
-  qEl.addEventListener("keydown", (e) => { if (e.key === "Enter") run(qEl.value.trim()); });
-  document.querySelectorAll("[data-demo]").forEach((b) =>
-    b.addEventListener("click", () => { qEl.value = b.dataset.demo; run(b.dataset.demo); }));
+
+  function grant(id){
+    var a = state.get(id);
+    if(!a || a.real !== true) return;    // honesty: only real actions can be granted
+    var node = document.getElementById("row-"+id);
+    disableHitlButtons(node);
+    postDecision(id, "granted");
+    // INTENTIONAL: mark approval ONLY — do NOT set a.status='executing'.
+    // The awaiting->executing->done progression belongs to the SSE stream; the
+    // click only records the human's decision. Only an SSE 'done' (real===true)
+    // can produce the green "echt" check. Renders B's "Freigegeben …" line.
+    a.approval = "granted";
+    render();
+    announce("Freigegeben. Aktion wird ausgeführt – warte auf Bestätigung des Streams.");
+  }
+
+  function deny(id){
+    var a = state.get(id);
+    if(!a) return;
+    var node = document.getElementById("row-"+id);
+    disableHitlButtons(node);
+    postDecision(id, "denied");
+    a.approval = "denied";               // terminal, local
+    render();
+    announce("Abgelehnt. Keine Ausführung.");
+  }
+
+  function wireHitl(){
+    listEl.querySelectorAll("[data-approve]").forEach(function(b){
+      b.addEventListener("click", function(){ grant(b.getAttribute("data-approve")); });
+    });
+    listEl.querySelectorAll("[data-deny]").forEach(function(b){
+      b.addEventListener("click", function(){ deny(b.getAttribute("data-deny")); });
+    });
+  }
+
+  /* keyboard: Enter=Freigeben / Esc=Ablehnen on the single awaiting node.
+     DOCUMENT-scoped (B) with the INPUT/TEXTAREA/BUTTON/A guard so it never
+     hijacks typing or a focused control's own activation. */
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Enter" && e.key !== "Escape") return;
+    var id = awaitingId();
+    if(!id) return;
+    var tag = (e.target && e.target.tagName) || "";
+    if(tag === "BUTTON" || tag === "A" || tag === "INPUT" || tag === "TEXTAREA") return;
+    if(e.key === "Enter"){ e.preventDefault(); grant(id); }
+    else { e.preventDefault(); deny(id); }
+  });
+
+  /* =========================================================================
+     "Nacharbeit starten" -> POST /run; 404/failure -> inline hint, no fake.
+     ========================================================================= */
+  startBtn.addEventListener("click", function(){
+    runHint.classList.remove("show");
+    connText.textContent = "Läuft …";
+    startBtn.disabled = true;
+    fetch("/run", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({instruction: CANON, hitl: true})
+    }).then(function(r){
+      if(!r.ok){ throw new Error("status "+r.status); }
+      // success: the live stream delivers run_start/action/answer/run_end.
+      // run_end re-enables the button; keep it disabled while the run is live.
+    }).catch(function(){
+      startBtn.disabled = false;
+      runHint.classList.add("show");
+      connText.textContent = connEl.getAttribute("data-conn")==="up" ? "Live verbunden" : "Verbindung … erneuter Versuch";
+    });
+  });
+
+  /* =========================================================================
+     ~1.5s FALLBACK — five baked demo actions, shown only if no SSE arrives.
+     Any live snapshot/action overrides it (liveReceived gate).
+     ========================================================================= */
+  var FALLBACK = [
+    { action_id:"a1", tool:"lookup_foerderung", real:true, status:"done", approval:null,
+      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (belegt)",
+      source:"https://www.kfw.de/…261 (Stand 2026-05)",
+      source_href:"https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/F%C3%B6rderprodukte/Wohngeb%C3%A4ude-Kredit-(261)/" },
+    { action_id:"a2", tool:"create_calendar_event", real:true, status:"awaiting_approval", approval:null,
+      llm_model:MODEL, summary:"Folgetermin Mi 14:00?", _trusted:true,
+      detail:'Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Echte Kalender-Einladung wird verschickt.',
+      prompt:"Soll ich den Termin jetzt anlegen und die Einladung an Frau Schäfer senden?" },
+    { action_id:"a3", tool:"send_mail", real:true, status:"executing", approval:"granted",
+      llm_model:MODEL, summary:"Unterlagen-Mail an Kunden", _trusted:true,
+      detail:'Freigegeben um 11:21 · sende Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Mail landet live.</em>' },
+    { action_id:"a4", tool:"crm_upsert", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Kunde aktualisiert (Vorschau · next integration)",
+      detail:"Stub – noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation. Wird in der nächsten Integration echt." },
+    { action_id:"a5", tool:"create_ticket", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Ticket angelegt (Vorschau · next integration)",
+      detail:"Stub – Ticketsystem folgt im nächsten Schritt. Noch keine echte Anlage." }
+  ];
+
+  var fallbackTimer = setTimeout(function(){
+    if(liveReceived) return;
+    isFallback = true;
+    hydrate(FALLBACK);
+    render(awaitingId());   // land keyboard focus on the awaiting decision
+  }, 1500);
+
+  /* =========================================================================
+     EventSource — snapshot (re-hydrate) / action (upsert) / ping (ignore).
+     Survives a drop and re-hydrates from the NEXT snapshot, no reload.
+     ========================================================================= */
+  function markLive(){
+    if(!liveReceived){
+      liveReceived = true;
+      isFallback = false;
+      clearTimeout(fallbackTimer);
+      fbNote.classList.remove("show");
+      listEl.classList.remove("fallback");
+    }
+  }
+  function setConn(up){
+    connEl.setAttribute("data-conn", up ? "up" : "down");
+    connText.textContent = up ? "Live verbunden" : "Verbindung … erneuter Versuch";
+  }
+
+  if(typeof EventSource !== "undefined"){
+    try{
+      var es = new EventSource("/events");
+
+      // Real server protocol: EVERY frame is an UNNAMED default message
+      // ("data: <json>\n\n", no "event:" line), a StreamMsg discriminated by
+      // .kind. Dispatch through es.onmessage — there is no snapshot/ping event.
+      es.onmessage = function(ev){
+        var m;
+        try{ m = JSON.parse(ev.data); }catch(e){ return; }
+        if(!m || !m.kind) return;     // ignore retry-only / malformed frames
+        markLive();                   // any live message overrides the fallback
+
+        if(m.kind === "run_start"){
+          // A run_start resets the client's incremental action list.
+          state = new Map();
+          order = [];
+          render();
+          connText.textContent = "Läuft …";
+          if(startBtn) startBtn.disabled = true;
+        } else if(m.kind === "action"){
+          upsert(normalize(m.action)); // map .id -> action_id, then upsert
+          render();
+        } else if(m.kind === "answer"){
+          showAnswer(m.text, false);
+        } else if(m.kind === "error"){
+          showAnswer("Fehler: " + (m.message || ""), true);
+        } else if(m.kind === "run_end"){
+          connText.textContent = "Fertig · Live verbunden";
+          if(startBtn) startBtn.disabled = false;
+        }
+      };
+
+      es.onopen  = function(){ setConn(true); };
+      es.onerror = function(){
+        // SSE dropped — show reconnecting; browser auto-retries. We KEEP the
+        // current render and re-hydrate cleanly from the next snapshot.
+        setConn(false);
+      };
+    }catch(e){ /* no server -> fallback handles it */ }
+  }
+})();
 </script>
+
+<!--
+  ============================================================================
+  SELF-REVIEW — honesty invariants + technical contract checklist
+  ----------------------------------------------------------------------------
+  HONESTY INVARIANTS (sacred):
+   [x] Green "echt" check reachable ONLY via real===true && status==='done':
+       resolveVisual() early-returns the amber "stub" visual for real!==true
+       BEFORE any status branch, so a4/a5 (real:false) can never reach the
+       'done' branch even if a buggy/hostile snapshot sets status:'done'.
+       The buildNode "Freigegeben …" granted-decision line (which renders a green
+       check glyph) is now ALSO gated on real===true && (v.kind==='exec'|'pending')
+       && approval==='granted' && status!=='done', so a hostile snapshot
+       ({real:false, approval:'granted', status:'executing'}) cannot leak a green
+       check there either — the invariant is unbypassable on every render path.
+   [x] real===false (crm_upsert, create_ticket) -> amber "Vorschau · nächste
+       Integration", terminal, .stub spine (neutral hair, never a done glow),
+       never a green check.
+   [x] Color never the sole signal: every tag/marker pairs color + inline SVG
+       icon + text; legend explains echt vs. Vorschau persistently.
+   [x] lookup_foerderung surfaces action.source verbatim in the .source block
+       ("Quelle · belegt, nicht geraten").
+   [x] grant() marks approval='granted' ONLY; it does NOT set status='executing'.
+       executing->done arrives only from the SSE stream. denied is terminal local.
+
+  TECHNICAL CONTRACT:
+   [x] Single self-contained file: inline <style> + inline <script>, vanilla JS,
+       no CDN/framework/build, inline SVG only (no emoji).
+   [x] EventSource("/events"): "snapshot" (array -> wholesale re-hydrate),
+       "action" (object -> upsert by action_id), "ping" ignored.
+   [x] Survives SSE drop: onerror sets data-conn="down" + keeps render; next
+       snapshot wholesale re-hydrates, no hard reload.
+   [x] HITL: awaiting_approval && approval==null -> Freigeben/Ablehnen.
+       Freigeben -> POST /actions/{id}/approve {"decision":"granted"} (no fake done);
+       Ablehnen -> {"decision":"denied"} reflected as terminal. Buttons disabled
+       on click via element.disabled AND [disabled] (pointer-events:none + opacity).
+   [x] "Nacharbeit starten" -> POST /run; 404/failure -> inline #runHint, no fake.
+   [x] Five demo actions baked as FALLBACK, shown only if no SSE within ~1.5s,
+       dimmed (.timeline.fallback) + fallback-note; any live event overrides.
+   [x] a11y: :focus-visible rings; aria-live timeline + dedicated sr-only
+       announce() region for grant/deny; document-scoped Enter=Freigeben /
+       Esc=Ablehnen on the single awaiting node (INPUT/TEXTAREA/BUTTON/A guard);
+       focus moves to the awaiting Freigeben button after fallback/snapshot;
+       prefers-reduced-motion blanket + explicit kill; live pill min-height 44px,
+       buttons min 48px/44px. CONTRAST (light, small bold uppercase tags, >=4.5:1):
+       --warn #8a5200 on --warn-bg; --ok #0b6f46 on --ok-bg (~4.7:1, was 4.47:1);
+       tag-wait uses --accent-text #b8330b on --accent-soft (~4.6:1, was 3.27:1);
+       dark --ink-2 #cbcfdb. Dark mode green/accent tags already pass.
+   [x] Stream safety: live a.detail is esc()'d; rich <strong>/<em> only for
+       baked FALLBACK objects flagged _trusted:true. source href is http(s)-allow-
+       listed (javascript:/data: -> '#') so no stream-injected HTML/scheme runs.
+
+  IDENTITY / TOKEN AUDIT:
+   [x] No #0a0f1c, no #4f8cff, no "M. Hofmann".
+   [x] ONE identity: Frau Schäfer / frau.schaefer@example.de.
+   [x] llm_model "qwen-7b@eu-vllm" on all five demo actions (default MODEL too).
+   [x] Editorial accent red-orange #e8410f throughout; donor blue is only --run
+       (executing semantic), not a theme.
+
+  DONE-MARKER CHOICE: green CHECK glyph on done markers (brief permits a status
+  glyph); tool meaning preserved by the monospace tool chip + source block.
+  ============================================================================
+-->
 </body>
 </html>
