@@ -339,4 +339,115 @@ export const createEventTool = tool(
   }
 );
 
-export const calendarTools = [listEventsTool, createEventTool];
+/**
+ * Lokaler ISO-String OHNE Zeitzonen-Suffix (z.B. "2026-06-13T11:00:00").
+ * Passt zu toIcsDate()/createEventTool, die ISO-Strings als lokale Wanduhr
+ * interpretieren — so bleibt der von find_free_slot gewählte Slot beim Anlegen
+ * exakt erhalten.
+ */
+function toLocalIso(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+    `T${p(d.getHours())}:${p(d.getMinutes())}:00`
+  );
+}
+
+export const findFreeSlotTool = tool(
+  async ({ earliest_date, duration_min, business_start_hour, business_end_hour, search_days }) => {
+    const dur = (duration_min ?? 45) * 60_000;
+    const bStart = business_start_hour ?? 9;
+    const bEnd = business_end_hour ?? 17;
+    const days = search_days ?? 14;
+
+    const from = new Date(earliest_date);
+    if (Number.isNaN(from.getTime())) {
+      throw new Error(`Ungültiges earliest_date: ${earliest_date}`);
+    }
+
+    const client = await getClient();
+    const calendar = await resolveCalendar();
+
+    for (let offset = 0; offset < days; offset++) {
+      const day = new Date(from);
+      day.setDate(from.getDate() + offset);
+      const dow = day.getDay();
+      if (dow === 0 || dow === 6) continue; // Wochenende überspringen
+
+      const dayStart = new Date(day);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      // Belegte Intervalle des Tages einsammeln (absolute Zeitpunkte in ms).
+      const objects = await client.fetchCalendarObjects({
+        calendar,
+        timeRange: { start: dayStart.toISOString(), end: dayEnd.toISOString() },
+      });
+      const busy: [number, number][] = [];
+      for (const o of objects) {
+        try {
+          for (const ev of parseEvents(o.data ?? "")) {
+            if (ev.start && ev.end) busy.push([ev.start.getTime(), ev.end.getTime()]);
+          }
+        } catch {
+          // Unlesbares Objekt: lieber ignorieren als fälschlich blockieren.
+        }
+      }
+      busy.sort((a, b) => a[0] - b[0]);
+
+      // Bürozeiten in 15-Minuten-Schritten nach erster freier Lücke scannen.
+      const cursor = new Date(day);
+      cursor.setHours(bStart, 0, 0, 0);
+      const limit = new Date(day);
+      limit.setHours(bEnd, 0, 0, 0);
+
+      while (cursor.getTime() + dur <= limit.getTime()) {
+        const slotStart = cursor.getTime();
+        const slotEnd = slotStart + dur;
+        const collides = busy.some(([bs, be]) => slotStart < be && slotEnd > bs);
+        if (!collides) {
+          const s = new Date(slotStart);
+          const e = new Date(slotEnd);
+          return [
+            `Freier Slot gefunden:`,
+            `start: ${toLocalIso(s)}`,
+            `end:   ${toLocalIso(e)}`,
+            `(${DATE_TIME_FMT.format(s)} → ${DATE_TIME_FMT.format(e)}, Europe/Berlin)`,
+            `→ Lege den Termin mit genau diesen start/end-Werten via create_calendar_event an.`,
+          ].join("\n");
+        }
+        cursor.setTime(slotStart + 15 * 60_000);
+      }
+    }
+
+    return (
+      `Kein freier Slot von ${dur / 60_000} min in Bürozeiten (${bStart}–${bEnd} Uhr) ` +
+      `innerhalb der nächsten ${days} Werktage ab ${earliest_date} gefunden. ` +
+      `Bitte Suchfenster erweitern oder Zeitraum anpassen.`
+    );
+  },
+  {
+    name: "find_free_slot",
+    description:
+      "Findet den frühesten freien Termin-Slot im CalDAV-Kalender. Nutze dies, wenn " +
+      "ein Folgetermin nötig ist, aber im Gespräch KEIN festes Datum vereinbart wurde " +
+      "(Terminvorschlag): gib den frühesten Wunschtag (earliest_date) und die Dauer an, " +
+      "das Tool prüft die Verfügbarkeit und liefert einen garantiert kollisionsfreien " +
+      "Slot. Anschließend mit create_calendar_event anlegen und per send_email einladen.",
+    schema: z.object({
+      earliest_date: z
+        .string()
+        .describe("Frühester Tag für den Termin, ISO-8601 (z.B. 2026-06-13 oder 2026-06-13T00:00:00)"),
+      duration_min: z.number().optional().describe("Dauer in Minuten (Default 45)"),
+      business_start_hour: z.number().optional().describe("Frühester Beginn, Stunde (Default 9)"),
+      business_end_hour: z.number().optional().describe("Spätestes Ende, Stunde (Default 17)"),
+      search_days: z
+        .number()
+        .optional()
+        .describe("Wie viele Tage ab earliest_date durchsucht werden (Default 14)"),
+    }),
+  }
+);
+
+export const calendarTools = [listEventsTool, createEventTool, findFreeSlotTool];
