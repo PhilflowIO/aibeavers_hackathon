@@ -544,9 +544,9 @@
       </span>
     </div>
     <span class="spacer"></span>
-    <span class="live" id="conn" data-conn="up" role="status" aria-live="polite">
+    <span class="live" id="conn" data-conn="down" role="status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span>
-      <span id="connText">Live verbunden</span>
+      <span id="connText">Verbindung …</span>
     </span>
   </div>
 </header>
@@ -578,7 +578,7 @@
       </span>
       <p class="run-hint" id="runHint" role="alert">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>
-        <span>Kein Backend erreichbar. Demo per <code>make mock</code> starten.</span>
+        <span>Kein Backend erreichbar. Lokalen Server per <code>pnpm ui</code> starten.</span>
       </p>
     </div>
   </section>
@@ -896,24 +896,28 @@
   }
 
   /* =========================================================================
-     HITL — POST decision; NO optimistic green. Buttons disabled on click.
-     grant -> mark approval='granted' ONLY (status untouched); the
-     executing->done transition comes from the SSE stream, never the click.
-     deny -> terminal locally.
+     HITL — POST decision; NO optimistic green or local decision truth.
+     grant -> after /approve success, mark approval='granted' ONLY (status
+     untouched); executing->done still comes from the SSE stream, never click.
+     deny -> terminal locally only after /approve success.
      ========================================================================= */
   function postDecision(id, decision){
     return fetch("/approve", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ id: id, decision: decision })
-    }).catch(function(){ /* offline demo: state still advances locally below */ });
+    }).then(function(response){
+      if(!response.ok) throw new Error("approve status "+response.status);
+      return response;
+    });
   }
 
-  function disableHitlButtons(node){
+  function setHitlButtonsDisabled(node, disabled){
     if(!node) return;
     node.querySelectorAll("button[data-approve],button[data-deny]").forEach(function(b){
-      b.disabled = true;                 // B: element.disabled property
-      b.setAttribute("disabled","disabled"); // C: attribute for [disabled] CSS (pointer-events/opacity)
+      b.disabled = disabled;                 // B: element.disabled property
+      if(disabled) b.setAttribute("disabled","disabled"); // C: attribute for [disabled] CSS
+      else b.removeAttribute("disabled");
     });
   }
 
@@ -921,26 +925,38 @@
     var a = state.get(id);
     if(!a || a.real !== true) return;    // honesty: only real actions can be granted
     var node = document.getElementById("row-"+id);
-    disableHitlButtons(node);
-    postDecision(id, "granted");
-    // INTENTIONAL: mark approval ONLY — do NOT set a.status='executing'.
-    // The awaiting->executing->done progression belongs to the SSE stream; the
-    // click only records the human's decision. Only an SSE 'done' (real===true)
-    // can produce the green "echt" check. Renders B's "Freigegeben …" line.
-    a.approval = "granted";
-    render();
-    announce("Freigegeben. Aktion wird ausgeführt – warte auf Bestätigung des Streams.");
+    setHitlButtonsDisabled(node, true);
+    postDecision(id, "granted").then(function(){
+      var current = state.get(id);
+      if(!current || current.real !== true) return;
+      // INTENTIONAL: mark approval ONLY — do NOT set current.status='executing'.
+      // The awaiting->executing->done progression belongs to the SSE stream; the
+      // click only records the backend-accepted human decision. Only an SSE 'done'
+      // (real===true) can produce the green "echt" check.
+      current.approval = "granted";
+      render();
+      announce("Freigegeben. Aktion wird ausgeführt – warte auf Bestätigung des Streams.");
+    }).catch(function(){
+      setHitlButtonsDisabled(document.getElementById("row-"+id), false);
+      announce("Freigabe wurde nicht bestätigt. Bitte erneut versuchen.");
+    });
   }
 
   function deny(id){
     var a = state.get(id);
     if(!a) return;
     var node = document.getElementById("row-"+id);
-    disableHitlButtons(node);
-    postDecision(id, "denied");
-    a.approval = "denied";               // terminal, local
-    render();
-    announce("Abgelehnt. Keine Ausführung.");
+    setHitlButtonsDisabled(node, true);
+    postDecision(id, "denied").then(function(){
+      var current = state.get(id);
+      if(!current) return;
+      current.approval = "denied";        // terminal only after backend accepts
+      render();
+      announce("Abgelehnt. Keine Ausführung.");
+    }).catch(function(){
+      setHitlButtonsDisabled(document.getElementById("row-"+id), false);
+      announce("Ablehnung wurde nicht bestätigt. Bitte erneut versuchen.");
+    });
   }
 
   function wireHitl(){
@@ -1123,8 +1139,10 @@
    [x] Survives SSE drop: onerror sets data-conn="down" + keeps render.
    [x] HITL: awaiting_approval && approval==null -> Freigeben/Ablehnen.
        Freigeben -> POST /approve {"id", "decision":"granted"} (no fake done);
-       Ablehnen -> {"decision":"denied"} reflected as terminal. Buttons disabled
-       on click via element.disabled AND [disabled] (pointer-events:none + opacity).
+       Ablehnen -> {"decision":"denied"}. Both decisions are rendered only after
+       /approve returns success; failed requests keep the awaiting state and
+       re-enable buttons. Buttons are disabled while the request is in flight via
+       element.disabled AND [disabled] (pointer-events:none + opacity).
    [x] "Nacharbeit starten" -> POST /run; 404/failure -> inline #runHint, no fake.
    [x] Five demo actions baked as preview-only FALLBACK (real:false), shown only
        if no SSE within ~1.5s, dimmed (.timeline.fallback) + fallback-note; any
