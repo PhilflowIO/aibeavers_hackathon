@@ -1,0 +1,942 @@
+<!doctype html>
+<!--
+  ============================================================================
+  PRODUCTION UI — "Editorial Spine" (merge slug: editorial-bold × live-timeline)
+  Product: Nacharbeits-Agent — philflow — AI Beavers Hackathon, Hamburg 2026-06-06
+  ----------------------------------------------------------------------------
+  KEPT FROM BASE (editorial-bold) — identity / SKIN:
+    - Warm editorial palette + tokens: --ink / --paper / --accent (red-orange
+      #e8410f), --serif display font.
+    - Sticky .topbar; full .hero (kicker, big serif <h1> with <em> accent,
+      .lede, italic .tagline blockquote); .statstrip (3 stats); .work-head
+      heading ("Die Nacharbeit – live" + Frau-Schäfer subline); .legend honesty
+      key; footer with EU/sovereignty mark.
+    - Editorial type treatment: serif action title, accent-red HITL/awaiting
+      state, dashed accent divider above HITL controls; the .idx numbering
+      (01–05) folded BESIDE the marker.
+    - btn-primary "Nacharbeit starten" + "Gespräch ansehen" ghost button.
+    - The editorial @media(prefers-color-scheme: dark) block (editorial dark,
+      NOT donor's blue).
+
+  ADOPTED FROM DONOR (live-timeline) — re-skinned into editorial tokens:
+    - Vertical timeline spine: 56px rail column, connecting .rail::after line,
+      round .marker per node, grid .node { grid-template-columns: 56px 1fr }.
+    - Status-carrying spine: completed segments tinted --ok (green); active
+      segment flowing @keyframes flow; HITL marker @keyframes throb RECOLORED to
+      --accent (editorial red); executing spinner marker; stub marker --warn.
+    - Node enter animation (@keyframes rise, staggered nth-child delays).
+    - "Transcript source" card at the TOP of the spine — causality anchor:
+      Transkript → Ableitung → Ausführung.
+    - Executing-row indeterminate .progress bar.
+  Donor's dark-blue (#0a0f1c) / philflow-blue (#4f8cff) theme and "M. Hofmann"
+  identity were fully removed. ONE client = Frau Schäfer · frau.schaefer@example.de.
+
+  HONESTY MODEL (sacred — enforced in markup AND JS):
+    green ✓ "echt"   -> ONLY real===true && status==="done"
+    real===false     -> amber "Vorschau · nächste Integration", terminal,
+                        NEVER a green check, never a spine "done" glow
+    Color is never the sole signal — every status pairs color + icon + text.
+    lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
+
+  TECHNICAL CONTRACT (production-wired — this is the real index.html):
+    - Single self-contained file, vanilla JS, no CDN/framework/build, inline SVG.
+    - EventSource("/events"): event "snapshot" (array -> wholesale re-hydrate),
+      event "action" (object -> upsert by action_id), ignore "ping".
+    - Survives SSE drop -> re-hydrates from the next snapshot, no hard reload.
+    - HITL: status==="awaiting_approval" && approval==null -> Freigeben/Ablehnen.
+      Freigeben -> POST /actions/{id}/approve {"decision":"granted"} (NO optimistic
+      green — wait for stream executing->done); Ablehnen -> {"decision":"denied"}
+      reflected as terminal locally. Buttons disabled on click.
+    - "Nacharbeit starten" -> POST /run; 404/failure -> inline hint, never fakes.
+    - 5 demo actions baked as FALLBACK shown only if no SSE within ~1.5s; any live
+      snapshot/action overrides it. ONE render(state) builds nodes from data, so
+      live + fallback share one code path.
+    - a11y: :focus-visible rings; aria-live stream; Enter=Freigeben / Esc=Ablehnen
+      on the single awaiting node; prefers-reduced-motion kills animation;
+      >=44px targets; >=4.5:1 contrast light + dark.
+  ============================================================================
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nacharbeits-Agent — philflow</title>
+<style>
+  /* ---------- TOKENS (editorial-bold) ---------- */
+  :root{
+    color-scheme: light dark;
+
+    --ink:        #0d0f14;
+    --ink-2:      #2b2f3a;
+    --paper:      #f4f1ea;
+    --paper-2:    #ffffff;
+    --line:       #1a1d24;
+    --hair:       rgba(13,15,20,.12);
+
+    --accent:     #e8410f;   /* editorial red-orange */
+    --accent-ink: #ffffff;
+    --accent-soft:#fbe2d8;
+
+    --ok:         #0c7a4d;   /* echt / green */
+    --ok-bg:      #d8f0e2;
+    --ok-line:    #0c7a4d;
+    --warn:       #9a5b00;   /* Vorschau / amber */
+    --warn-bg:    #fbe7c2;
+    --warn-line:  #b06a00;
+    --live:       #0c7a4d;
+    --run:        #0a4ea3;   /* executing / blue */
+    --run-bg:     #d6e6fb;
+
+    --shadow-1: 0 1px 0 var(--hair);
+    --shadow-2: 0 6px 24px rgba(13,15,20,.10);
+    --shadow-glow: 0 0 0 1px var(--accent), 0 6px 24px rgba(232,65,15,.18);
+
+    --r: 4px;
+    --r-lg: 8px;
+
+    --maxw: 1120px;
+    --t: 200ms cubic-bezier(.2,.7,.3,1);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:    #f3f0e8;
+      --ink-2:  #c2c6d2;
+      --paper:  #0c0e13;
+      --paper-2:#15181f;
+      --line:   #e8e6df;
+      --hair:   rgba(243,240,232,.16);
+      --accent: #ff5a28;
+      --accent-ink: #1a0d07;
+      --accent-soft:#2e160b;
+      --ok:     #57e0a0; --ok-bg: #0e2e22; --ok-line: #57e0a0;
+      --warn:   #ffc266; --warn-bg: #2f230d; --warn-line: #ffc266;
+      --live:   #57e0a0;
+      --run:    #7db4ff; --run-bg:#10243f;
+      --shadow-2: 0 8px 30px rgba(0,0,0,.5);
+      --shadow-glow: 0 0 0 1px var(--accent), 0 8px 30px rgba(255,90,40,.28);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* ---------- FOCUS (never removed) ---------- */
+  :focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:3px;
+    border-radius:3px;
+  }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    border-bottom:2px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:30;
+  }
+  .topbar .row{ display:flex; align-items:center; gap:16px; padding:14px 0; }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo{
+    width:40px; height:40px; flex:0 0 auto;
+    background:var(--ink); color:var(--paper);
+    border-radius:var(--r);
+    display:grid; place-items:center;
+  }
+  @media (prefers-color-scheme: dark){ .logo{ background:var(--accent); color:var(--accent-ink); } }
+  .logo svg{ width:24px; height:24px; }
+  .brand-txt{ display:flex; flex-direction:column; line-height:1.05; min-width:0; }
+  .brand-txt b{ font-size:1.02rem; letter-spacing:.2px; }
+  .brand-txt span{ font-size:.74rem; color:var(--ink-2); letter-spacing:.18em; text-transform:uppercase; }
+  .spacer{ flex:1 1 auto; }
+
+  /* Live indicator (state-driven) */
+  .live{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.82rem; font-weight:700; letter-spacing:.04em;
+    padding:8px 12px; border:1.5px solid var(--ok-line);
+    color:var(--ok); border-radius:999px; background:var(--ok-bg);
+    min-height:36px;
+  }
+  .live[data-conn="down"]{ color:var(--warn); border-color:var(--warn-line); background:var(--warn-bg); }
+  .live[data-conn="down"] .dot{ background:var(--warn); animation:none; }
+  .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--live);
+    box-shadow:0 0 0 0 var(--live);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(12,122,77,.5); }
+    70%{ box-shadow:0 0 0 8px rgba(12,122,77,0); }
+    100%{ box-shadow:0 0 0 0 rgba(12,122,77,0); }
+  }
+  @media (prefers-reduced-motion: reduce){ .dot{ animation:none; } }
+
+  /* ---------- HERO (editorial) ---------- */
+  .hero{ padding:54px 0 38px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:.78rem; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--accent);
+  }
+  .kicker .bar{ width:34px; height:3px; background:var(--accent); display:inline-block; }
+
+  .hero h1{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(2.6rem, 7vw, 5.4rem);
+    line-height:.98; letter-spacing:-.02em;
+    margin:.32em 0 .12em; max-width:16ch; text-wrap:balance;
+  }
+  .hero h1 em{ font-style:italic; color:var(--accent); }
+
+  .lede{ font-size:clamp(1.05rem, 2.1vw, 1.45rem); color:var(--ink-2); max-width:60ch; margin:0 0 6px; }
+  .tagline{
+    font-family:var(--serif); font-style:italic;
+    font-size:clamp(1.1rem, 2.2vw, 1.5rem); color:var(--ink);
+    border-left:4px solid var(--accent); padding-left:16px;
+    margin:22px 0 28px; max-width:48ch;
+  }
+
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+
+  .btn{
+    font:inherit; font-weight:800; letter-spacing:.01em;
+    border-radius:var(--r-lg); cursor:pointer;
+    min-height:52px; padding:0 26px;
+    display:inline-flex; align-items:center; gap:10px;
+    border:2px solid transparent;
+    transition:transform var(--t), background var(--t), box-shadow var(--t);
+  }
+  .btn svg{ width:20px; height:20px; }
+  .btn:active{ transform:translateY(2px); }
+  @media (prefers-reduced-motion: reduce){ .btn:active{ transform:none; } }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); font-size:1.05rem; box-shadow:var(--shadow-2); }
+  .btn-primary:hover{ background:#cf3309; }
+  @media (prefers-color-scheme: dark){ .btn-primary:hover{ background:#ff6f43; } }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover{ background:var(--ink); color:var(--paper); }
+
+  .src-pill{ display:inline-flex; align-items:center; gap:8px; font-size:.8rem; color:var(--ink-2); }
+  .src-pill svg{ width:16px; height:16px; flex:0 0 auto; }
+
+  /* inline hint for /run 404 degrade */
+  .run-hint{
+    width:100%; margin:14px 0 0; padding:11px 14px;
+    background:var(--warn-bg); border:1.5px solid var(--warn-line);
+    color:var(--warn); border-radius:var(--r-lg);
+    font-size:.86rem; font-weight:600;
+    display:none; gap:9px; align-items:center;
+  }
+  .run-hint.show{ display:flex; }
+  .run-hint svg{ width:17px; height:17px; flex:0 0 auto; }
+  .run-hint code{ font-family:var(--mono); background:rgba(0,0,0,.08); padding:1px 6px; border-radius:4px; }
+  @media (prefers-color-scheme: dark){ .run-hint code{ background:rgba(255,255,255,.12); } }
+
+  /* Stat strip */
+  .statstrip{ display:grid; grid-template-columns:repeat(3,1fr); border-bottom:2px solid var(--line); }
+  .stat{ padding:18px 4px 22px; }
+  .stat + .stat{ border-left:1px solid var(--hair); padding-left:22px; }
+  .stat b{ display:block; font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); line-height:1; }
+  .stat span{ font-size:.82rem; color:var(--ink-2); }
+  @media (max-width:680px){
+    .statstrip{ grid-template-columns:1fr; }
+    .stat + .stat{ border-left:0; border-top:1px solid var(--hair); padding-left:4px; }
+  }
+
+  /* ---------- WORK SECTION ---------- */
+  .work{ padding:36px 0 64px; }
+  .work-head{ display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:18px; }
+  .work-head h2{ font-family:var(--serif); font-weight:800; font-size:clamp(1.6rem,4vw,2.6rem); line-height:1; margin:0; letter-spacing:-.01em; }
+  .work-head p{ margin:6px 0 0; color:var(--ink-2); font-size:.95rem; }
+
+  /* Legend (persistent honesty key) */
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-radius:var(--r-lg); padding:12px 14px; box-shadow:var(--shadow-1);
+  }
+  .legend .lg{ display:inline-flex; align-items:center; gap:8px; font-size:.83rem; font-weight:600; }
+  .legend .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 9px; border-radius:999px; font-weight:800; font-size:.74rem;
+    letter-spacing:.04em; text-transform:uppercase; border:1.5px solid;
+  }
+  .chip-ok{ color:var(--ok); background:var(--ok-bg); border-color:var(--ok-line); }
+  .chip-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .chip svg{ width:13px; height:13px; }
+  .legend .sep{ color:var(--ink-2); font-weight:400; }
+
+  /* ---------- TRANSCRIPT SOURCE (top of spine) ---------- */
+  .transcript{
+    margin:22px 0 8px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-left:5px solid var(--ink);
+    border-radius:var(--r-lg); padding:16px 20px; box-shadow:var(--shadow-1);
+  }
+  @media (prefers-color-scheme: dark){ .transcript{ border-left-color:var(--accent); } }
+  .transcript-head{
+    display:flex; align-items:center; gap:9px;
+    font-size:.74rem; font-weight:800; color:var(--ink-2);
+    text-transform:uppercase; letter-spacing:.14em;
+  }
+  .transcript-head svg{ width:15px; height:15px; }
+  .transcript p{
+    margin:9px 0 0; color:var(--ink); font-size:1.02rem;
+    font-family:var(--serif); font-style:italic; line-height:1.55; max-width:70ch;
+  }
+  .transcript .who{ font-style:normal; font-family:var(--sans); font-weight:800; color:var(--ink); margin-right:4px; }
+  .flowmark{
+    margin-top:12px; font-size:.74rem; font-weight:700; letter-spacing:.04em;
+    color:var(--ink-2); display:inline-flex; align-items:center; gap:8px;
+  }
+  .flowmark svg{ width:14px; height:14px; }
+
+  /* ---------- THE SPINE (donor mechanic, editorial skin) ---------- */
+  .timeline{ list-style:none; margin:22px 0 0; padding:0; position:relative; }
+
+  .node{
+    position:relative; display:grid;
+    grid-template-columns:56px 1fr; gap:18px;
+    padding-bottom:18px;
+    animation:rise 420ms cubic-bezier(.16,.84,.44,1) both;
+  }
+  .node:last-child{ padding-bottom:0; }
+  .node:nth-child(1){ animation-delay:.02s; }
+  .node:nth-child(2){ animation-delay:.10s; }
+  .node:nth-child(3){ animation-delay:.18s; }
+  .node:nth-child(4){ animation-delay:.26s; }
+  .node:nth-child(5){ animation-delay:.34s; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+
+  /* rail + connecting spine segment */
+  .rail{ position:relative; display:flex; flex-direction:column; align-items:center; }
+  .idx{
+    font-family:var(--serif); font-weight:800; font-size:.92rem;
+    color:var(--ink-2); opacity:.7; margin-bottom:6px; line-height:1;
+  }
+  .rail::after{
+    content:""; position:absolute;
+    top:64px; bottom:-12px; left:50%;
+    width:3px; transform:translateX(-50%);
+    background:var(--hair); border-radius:2px;
+  }
+  .node:last-child .rail::after{ display:none; }
+  .node.done .rail::after{ background:linear-gradient(180deg, var(--ok-line), var(--hair)); }
+  .node.flow .rail::after{
+    background:linear-gradient(180deg, var(--accent), var(--hair));
+    background-size:100% 200%; animation:flow 1.6s linear infinite;
+  }
+  @keyframes flow{ 0%{ background-position:0 -40px; } 100%{ background-position:0 40px; } }
+
+  /* node marker */
+  .marker{
+    width:46px; height:46px; flex:none; border-radius:50%;
+    display:grid; place-items:center;
+    background:var(--paper-2); border:2px solid var(--hair);
+    color:var(--ink-2); z-index:1; box-shadow:var(--shadow-1);
+  }
+  .marker svg{ width:21px; height:21px; }
+  .node.done .marker{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok); }
+  .node.hitl .marker{
+    background:var(--accent-soft); border-color:var(--accent); color:var(--accent);
+    box-shadow:var(--shadow-glow); animation:throb 2s ease-in-out infinite;
+  }
+  @keyframes throb{
+    0%,100%{ box-shadow:0 0 0 1px var(--accent), 0 0 0 rgba(232,65,15,0); }
+    50%{ box-shadow:0 0 0 1px var(--accent), 0 0 22px rgba(232,65,15,.45); }
+  }
+  .node.exec .marker{ background:var(--run-bg); border-color:var(--run); color:var(--run); }
+  .node.stub .marker{ background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn); }
+  .marker .spin{ animation:spin 1.1s linear infinite; transform-origin:center; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- ACTION CARD ---------- */
+  .card{
+    background:var(--paper-2);
+    border:1.5px solid var(--hair); border-left:5px solid var(--hair);
+    border-radius:var(--r-lg); padding:18px 20px;
+    box-shadow:var(--shadow-1);
+    transition:box-shadow var(--t), border-color var(--t);
+  }
+  .node.done .card{ border-left-color:var(--ok-line); }
+  .node.hitl .card{ border-left-color:var(--accent); box-shadow:var(--shadow-2); }
+  .node.exec .card{ border-left-color:var(--run); }
+  .node.stub .card{ border-left-color:var(--warn-line); }
+
+  .card-top{ display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; }
+  .tool{
+    font-family:var(--mono); font-size:.74rem; letter-spacing:.02em; color:var(--ink-2);
+    background:var(--paper); border:1px solid var(--hair); padding:2px 7px; border-radius:var(--r);
+  }
+  .summary{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(1.05rem,1.7vw,1.35rem); line-height:1.2;
+    flex:1 1 100%; order:3; margin:4px 0 0;
+  }
+
+  /* status tags (color + text + icon) */
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font-weight:800;
+    font-size:.74rem; letter-spacing:.05em; text-transform:uppercase;
+    border:1.5px solid; margin-left:auto; order:2;
+  }
+  .tag svg{ width:13px; height:13px; }
+  .tag-ok{   color:var(--ok);   background:var(--ok-bg);   border-color:var(--ok-line); }
+  .tag-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .tag-run{  color:var(--run);  background:var(--run-bg);  border-color:var(--run); }
+  .tag-wait{ color:var(--accent); background:var(--accent-soft); border-color:var(--accent); }
+
+  .detail{ font-size:.9rem; color:var(--ink-2); margin:10px 0 0; }
+  .detail strong{ color:var(--ink); }
+
+  /* source proof (lookup_foerderung verbatim) */
+  .source{
+    margin-top:10px; padding:10px 12px;
+    background:var(--ok-bg); border:1px dashed var(--ok-line);
+    border-radius:var(--r); font-size:.84rem;
+    display:flex; gap:9px; align-items:flex-start;
+  }
+  .source svg{ width:16px; height:16px; flex:0 0 auto; color:var(--ok); margin-top:2px; }
+  .source .lbl{ font-weight:800; color:var(--ok); display:block; text-transform:uppercase; letter-spacing:.05em; font-size:.72rem; }
+  .source a{ color:var(--ink); word-break:break-all; text-decoration:underline; text-underline-offset:2px; font-family:var(--mono); font-size:.8rem; }
+
+  /* executing indeterminate progress */
+  .progress{ margin-top:12px; height:6px; border-radius:999px; background:var(--run-bg); overflow:hidden; }
+  .progress > i{
+    display:block; height:100%; width:40%; border-radius:999px;
+    background:linear-gradient(90deg, transparent, var(--run), transparent);
+    animation:indet 1.4s ease-in-out infinite;
+  }
+  @keyframes indet{ 0%{ transform:translateX(-120%); } 100%{ transform:translateX(320%); } }
+
+  .modelline{ margin-top:12px; font-size:.74rem; color:var(--ink-2); display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+  .modelline svg{ width:14px; height:14px; }
+  .modelline b{ font-family:var(--mono); font-weight:700; color:var(--ink); }
+  .modelline .sep{ opacity:.5; }
+
+  /* HITL controls — editorial dashed accent divider */
+  .hitl{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  }
+  .hitl .q{ font-weight:800; font-size:.92rem; flex:1 1 220px; display:flex; align-items:center; gap:9px; }
+  .hitl .q svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent); }
+  .hitl .grp{ display:flex; gap:10px; }
+  .btn-approve, .btn-deny{
+    font:inherit; font-weight:800; border-radius:var(--r-lg);
+    display:inline-flex; align-items:center; gap:9px; cursor:pointer;
+    min-height:48px; padding:0 22px; font-size:1rem; border:2px solid;
+    transition:transform var(--t), filter var(--t), background var(--t);
+  }
+  .btn-approve{ background:var(--ok); color:#fff; border-color:var(--ok); }
+  @media (prefers-color-scheme: dark){ .btn-approve{ color:#042018; } }
+  .btn-approve:hover{ filter:brightness(1.08); }
+  .btn-deny{ background:transparent; color:var(--ink); border-color:var(--line); padding:0 20px; }
+  .btn-deny:hover{ background:var(--ink); color:var(--paper); }
+  .btn-approve:active, .btn-deny:active{ transform:translateY(2px); }
+  .btn-approve svg, .btn-deny svg{ width:18px; height:18px; }
+  .btn-approve:disabled, .btn-deny:disabled{ opacity:.55; cursor:default; filter:none; transform:none; }
+  @media (prefers-reduced-motion: reduce){ .btn-approve:active,.btn-deny:active{ transform:none; } }
+
+  /* terminal-decision line (denied / granted-pending) */
+  .decision{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    font-weight:800; font-size:.92rem; display:flex; align-items:center; gap:9px;
+  }
+  .decision svg{ width:18px; height:18px; flex:0 0 auto; }
+  .decision.denied{ color:var(--warn); border-top-color:var(--warn-line); }
+  .decision.granted{ color:var(--ok); }
+
+  /* fallback dimming until live arrives */
+  .timeline.fallback{ opacity:.62; }
+  .fallback-note{
+    display:none; align-items:center; gap:8px;
+    margin:14px 0 0; font-size:.8rem; color:var(--ink-2);
+  }
+  .fallback-note.show{ display:inline-flex; }
+  .fallback-note svg{ width:14px; height:14px; }
+
+  footer{
+    border-top:2px solid var(--line); padding:22px 0 40px;
+    color:var(--ink-2); font-size:.82rem;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  footer .eu{ display:inline-flex; align-items:center; gap:8px; font-weight:700; color:var(--ink); }
+  footer .eu svg{ width:18px; height:18px; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    .node{ animation:none; }
+    .node.flow .rail::after{ animation:none; }
+    .node.hitl .marker{ animation:none; }
+    .marker .spin{ animation:none; }
+    .progress > i{ animation:none; width:100%; opacity:.5; }
+  }
+
+  @media (max-width:560px){
+    .node{ grid-template-columns:44px 1fr; gap:12px; }
+    .marker{ width:40px; height:40px; }
+    .rail::after{ top:58px; }
+    .hero-actions{ gap:10px; }
+    .btn-primary{ width:100%; justify-content:center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="wrap row">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h18M5 7l1.5 10h11L19 7M9 12h6"/>
+        </svg>
+      </span>
+      <span class="brand-txt">
+        <b>Nacharbeits-Agent</b>
+        <span>philflow · finance</span>
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <span class="live" id="conn" data-conn="up" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="connText">Live verbunden</span>
+    </span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero wrap" aria-labelledby="h1">
+    <span class="kicker"><span class="bar" aria-hidden="true"></span>Nach dem Kundengespräch</span>
+    <h1 id="h1">Andere geben dir ein Protokoll. Wir geben dir deinen <em>Feierabend</em> zurück.</h1>
+    <p class="lede">
+      Klassische Notetaker liefern eine Liste. Dieser Agent <strong>erledigt</strong> die regulierte
+      Nacharbeit: Folgetermin buchen, Unterlagen-Mail schreiben, Förderung mit Quelle vorschlagen –
+      jeder Schritt mit deiner Freigabe.
+    </p>
+    <p class="tagline">„Belegt, nicht geraten.“ Souverän in der EU gehostet – Finanzdaten bleiben, wo sie hingehören.</p>
+
+    <div class="hero-actions">
+      <button class="btn btn-primary" id="startBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Nacharbeit starten
+      </button>
+      <button class="btn btn-ghost" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Gespräch ansehen
+      </button>
+      <span class="src-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        §34d/§34f-konform · EU-lokal
+      </span>
+      <p class="run-hint" id="runHint" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>
+        <span>Kein Backend erreichbar. Demo per <code>make mock</code> starten.</span>
+      </p>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="statstrip" aria-hidden="true">
+      <div class="stat"><b>5</b><span>Aktionen pro Gespräch</span></div>
+      <div class="stat"><b>2&nbsp;Klicks</b><span>menschliche Freigabe (HITL)</span></div>
+      <div class="stat"><b>100&nbsp;%</b><span>EU-gehostet · qwen-7b@eu-vllm</span></div>
+    </div>
+  </div>
+
+  <!-- ============ WORK / LIVE SPINE ============ -->
+  <section class="work wrap" aria-labelledby="workh">
+    <div class="work-head">
+      <div>
+        <h2 id="workh">Die Nacharbeit – live</h2>
+        <p>Frau Schäfer · Altersvorsorge &amp; Sanierung · heute 11:20 Uhr</p>
+      </div>
+      <div class="legend" role="note" aria-label="Legende zur Ehrlichkeit der Aktionen">
+        <span class="lg">
+          <span class="chip chip-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>echt</span>
+          Mail · Kalender · Förderung mit Quelle
+        </span>
+        <span class="sep" aria-hidden="true">|</span>
+        <span class="lg">
+          <span class="chip chip-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>Vorschau</span>
+          Stub – noch nicht verdrahtet
+        </span>
+      </div>
+    </div>
+
+    <!-- TRANSCRIPT SOURCE — causality anchor (top of spine) -->
+    <section class="transcript" aria-label="Gesprächs-Transkript">
+      <div class="transcript-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+        Gespräch erfasst · Quelle der Aktionen
+      </div>
+      <p><span class="who">Berater:</span> „…dann lassen Sie uns das mit der KfW-Förderung für die energetische Sanierung prüfen, Frau Schäfer, wir machen einen Folgetermin und ich schicke Ihnen die Unterlagen per Mail.“</p>
+      <span class="flowmark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Transkript → Ableitung → Ausführung
+      </span>
+    </section>
+
+    <ol class="timeline" id="list" aria-label="Nacharbeits-Aktionen (Live-Stream)" aria-live="polite" aria-busy="false"></ol>
+
+    <span class="fallback-note" id="fallbackNote" role="status">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      Demo-Vorschau – wartet auf Live-Stream (überschreibt sich beim ersten Ereignis).
+    </span>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span class="eu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+    Souverän · EU-lokal gehostet
+  </span>
+  <span>finance.philflow.io · AI Beavers Hackathon Hamburg · 2026-06-06</span>
+</footer>
+
+<script>
+"use strict";
+(function(){
+  /* =========================================================================
+     ONE render(state) builds every node from data — live SSE and the 1.5s
+     fallback share exactly this code path. State is a Map keyed by action_id.
+     ========================================================================= */
+
+  var MODEL = "qwen-7b@eu-vllm";
+  var listEl   = document.getElementById("list");
+  var connEl   = document.getElementById("conn");
+  var connText = document.getElementById("connText");
+  var runHint  = document.getElementById("runHint");
+  var fbNote   = document.getElementById("fallbackNote");
+
+  var state = new Map();   // action_id -> action object
+  var order = [];          // preserves arrival order for stable spine
+  var liveReceived = false;
+  var isFallback = false;
+
+  /* ----- icon library (inline SVG, tool-appropriate) ----- */
+  function ic(name){
+    var P = 'fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"';
+    switch(name){
+      case "calendar": return '<svg viewBox="0 0 24 24" '+P+'><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>';
+      case "mail":     return '<svg viewBox="0 0 24 24" '+P+'><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+      case "search":   return '<svg viewBox="0 0 24 24" '+P+'><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>';
+      case "crm":      return '<svg viewBox="0 0 24 24" '+P+'><path d="M3 5c0-1.1 4-2 9-2s9 .9 9 2-4 2-9 2-9-.9-9-2z"/><path d="M3 5v14c0 1.1 4 2 9 2s9-.9 9-2V5"/><path d="M3 12c0 1.1 4 2 9 2s9-.9 9-2"/></svg>';
+      case "ticket":   return '<svg viewBox="0 0 24 24" '+P+'><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
+      case "check":    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      case "cross":    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+      case "clock":    return '<svg viewBox="0 0 24 24" '+P+'><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      case "spinner":  return '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" opacity=".9"/><path d="M12 3a9 9 0 0 1 9 9" opacity=".25"/></svg>';
+      case "eye":      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+      case "person":   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+      case "link":     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>';
+      case "chip":     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>';
+      default:         return '';
+    }
+  }
+  var TOOL_ICON = {
+    lookup_foerderung:"search", create_calendar_event:"calendar",
+    send_mail:"mail", crm_upsert:"crm", create_ticket:"ticket"
+  };
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]; }); }
+
+  /* ----- derive node visual class + tag from honesty-safe state ----- */
+  function nodeClassOf(a){
+    if(a.status==="awaiting_approval" && a.approval==null) return "hitl flow";
+    if(a.status==="executing") return "exec flow";
+    if(a.status==="stub_preview" || a.real===false) return "stub";
+    if(a.status==="done" && a.real===true) return "done";
+    return ""; // pending / unknown
+  }
+  function markerIconOf(a){
+    if(a.status==="executing") return ic("spinner");
+    if(a.status==="done" && a.real===true) return ic("check");
+    return ic(TOOL_ICON[a.tool] || "chip");
+  }
+
+  /* ----- the single node builder (data -> DOM) ----- */
+  function buildNode(a, idx){
+    var li = document.createElement("li");
+    li.className = "node " + nodeClassOf(a);
+    li.setAttribute("data-action-id", a.action_id);
+    li.setAttribute("data-status", a.status);
+    li.setAttribute("data-real", String(a.real));
+
+    var num = ("0"+(idx+1)).slice(-2);
+
+    // ---- TAG (color + icon + text — never color alone) ----
+    var tag = "";
+    if(a.status==="done" && a.real===true){
+      tag = '<span class="tag tag-ok">'+ic("check")+'echt · erledigt</span>';
+    } else if(a.status==="awaiting_approval" && a.approval==null){
+      tag = '<span class="tag tag-wait">'+ic("clock")+'Freigabe nötig</span>';
+    } else if(a.status==="executing"){
+      tag = '<span class="tag tag-run">'+ic("spinner")+'läuft …</span>';
+    } else if(a.real===false){
+      tag = '<span class="tag tag-warn">'+ic("eye")+'Vorschau · nächste Integration</span>';
+    } else {
+      tag = '<span class="tag tag-wait">'+ic("clock")+'in Arbeit</span>';
+    }
+
+    // ---- SOURCE (lookup_foerderung surfaces action.source verbatim) ----
+    var sourceHtml = "";
+    if(a.source){
+      sourceHtml =
+        '<div class="source">'+ic("link")+
+        '<span><span class="lbl">Quelle · belegt, nicht geraten</span>'+
+        '<a href="'+esc(a.source_href||"#")+'" target="_blank" rel="noopener">'+esc(a.source)+'</a></span></div>';
+    }
+
+    // ---- DETAIL ----
+    var detailHtml = a.detail ? '<p class="detail">'+a.detail+'</p>' : "";
+
+    // ---- EXECUTING progress ----
+    var progHtml = (a.status==="executing")
+      ? '<div class="progress" aria-hidden="true"><i></i></div>' : "";
+
+    // ---- HITL / decision region ----
+    var hitlHtml = "";
+    if(a.status==="awaiting_approval" && a.approval==null){
+      hitlHtml =
+        '<div class="hitl">'+
+          '<span class="q">'+ic("person")+(a.prompt||"Freigeben?")+'</span>'+
+          '<div class="grp">'+
+            '<button class="btn-approve" type="button" data-approve="'+esc(a.action_id)+'">'+ic("check")+'Freigeben</button>'+
+            '<button class="btn-deny" type="button" data-deny="'+esc(a.action_id)+'">'+ic("cross")+'Ablehnen</button>'+
+          '</div>'+
+        '</div>';
+    } else if(a.approval==="denied"){
+      hitlHtml = '<div class="decision denied">'+ic("cross")+'Abgelehnt – keine Aktion ausgeführt.</div>';
+    } else if(a.approval==="granted" && a.status!=="done"){
+      hitlHtml = '<div class="decision granted">'+ic("check")+'Freigegeben – Ausführung läuft …</div>';
+    }
+
+    var footMeta = a.hitl_note ? '<span class="sep">·</span><span>'+esc(a.hitl_note)+'</span>' : "";
+
+    li.innerHTML =
+      '<div class="rail" aria-hidden="true">'+
+        '<span class="idx">'+num+'</span>'+
+        '<span class="marker">'+markerIconOf(a)+'</span>'+
+      '</div>'+
+      '<div class="card">'+
+        '<div class="card-top">'+
+          '<span class="tool">'+esc(a.tool)+'</span>'+
+          tag+
+          '<h3 class="summary">'+esc(a.summary)+'</h3>'+
+        '</div>'+
+        detailHtml + sourceHtml + progHtml + hitlHtml +
+        '<span class="modelline">'+ic("chip")+'Modell <b>'+esc(a.llm_model||MODEL)+'</b>'+footMeta+'</span>'+
+      '</div>';
+    return li;
+  }
+
+  /* ----- render(state): wholesale rebuild from the Map (one path for all) ----- */
+  function render(){
+    listEl.setAttribute("aria-busy","true");
+    listEl.classList.toggle("fallback", isFallback && !liveReceived);
+    fbNote.classList.toggle("show", isFallback && !liveReceived);
+
+    var frag = document.createDocumentFragment();
+    order.forEach(function(id, i){
+      var a = state.get(id);
+      if(a) frag.appendChild(buildNode(a, i));
+    });
+    listEl.replaceChildren(frag);
+    listEl.setAttribute("aria-busy","false");
+    wireHitl();
+  }
+
+  /* ----- upsert one action by action_id (event "action") ----- */
+  function upsert(a){
+    if(!a || !a.action_id) return;
+    if(!state.has(a.action_id)) order.push(a.action_id);
+    // merge so partial updates (e.g. status flip) keep prior fields
+    state.set(a.action_id, Object.assign({}, state.get(a.action_id)||{}, a));
+  }
+
+  /* ----- wholesale re-hydrate (event "snapshot") ----- */
+  function hydrate(arr){
+    if(!Array.isArray(arr)) return;
+    state = new Map();
+    order = [];
+    arr.forEach(upsert);
+  }
+
+  /* =========================================================================
+     HITL — POST decision; NO optimistic green. Buttons disabled on click.
+     granted -> wait for stream executing->done. denied -> terminal locally.
+     ========================================================================= */
+  function postDecision(id, decision){
+    return fetch("/actions/"+encodeURIComponent(id)+"/approve", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({decision: decision})
+    }).catch(function(){ /* offline demo: state still advances locally below */ });
+  }
+
+  function decide(id, decision){
+    var node = listEl.querySelector('[data-action-id="'+CSS.escape(id)+'"]');
+    if(node){
+      node.querySelectorAll("button[data-approve],button[data-deny]").forEach(function(b){ b.disabled=true; });
+    }
+    postDecision(id, decision);
+    var a = state.get(id);
+    if(!a) return;
+    if(decision==="granted"){
+      // DO NOT fake done — only mark approval; stream advances executing->done.
+      a.approval = "granted";               // remove buttons, show "läuft …"
+      // If no backend ever answers, the awaiting->executing transition still
+      // belongs to the stream; we only reflect the human's recorded decision.
+    } else {
+      a.approval = "denied";                // terminal, local
+      a.status   = "denied";
+    }
+    render();
+  }
+
+  function wireHitl(){
+    listEl.querySelectorAll("[data-approve]").forEach(function(b){
+      b.addEventListener("click", function(){ decide(b.getAttribute("data-approve"), "granted"); });
+    });
+    listEl.querySelectorAll("[data-deny]").forEach(function(b){
+      b.addEventListener("click", function(){ decide(b.getAttribute("data-deny"), "denied"); });
+    });
+  }
+
+  // keyboard: Enter=Freigeben / Esc=Ablehnen on the single awaiting node
+  document.addEventListener("keydown", function(e){
+    if(e.key!=="Enter" && e.key!=="Escape") return;
+    var awaiting = null;
+    order.some(function(id){ var a=state.get(id);
+      if(a && a.status==="awaiting_approval" && a.approval==null){ awaiting=id; return true; } return false; });
+    if(!awaiting) return;
+    var tag = (e.target && e.target.tagName)||"";
+    if(tag==="BUTTON" || tag==="A" || tag==="INPUT" || tag==="TEXTAREA") return;
+    if(e.key==="Enter"){ e.preventDefault(); decide(awaiting,"granted"); }
+    else { e.preventDefault(); decide(awaiting,"denied"); }
+  });
+
+  /* =========================================================================
+     "Nacharbeit starten" -> POST /run; 404/failure -> inline hint, no fake.
+     ========================================================================= */
+  document.getElementById("startBtn").addEventListener("click", function(){
+    runHint.classList.remove("show");
+    connText.textContent = "Läuft …";
+    fetch("/run", {method:"POST"}).then(function(r){
+      if(!r.ok){ throw new Error("status "+r.status); }
+      // success: live stream will deliver snapshot/action events.
+    }).catch(function(){
+      runHint.classList.add("show");
+      connText.textContent = connEl.getAttribute("data-conn")==="up" ? "Live verbunden" : "Verbindung … erneuter Versuch";
+    });
+  });
+
+  /* =========================================================================
+     1.5s FALLBACK — five baked demo actions, shown only if no SSE arrives.
+     Any live snapshot/action overrides it (liveReceived gate).
+     ========================================================================= */
+  var FALLBACK = [
+    { action_id:"a1", tool:"lookup_foerderung", real:true, status:"done", approval:null,
+      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (belegt)",
+      source:"https://www.kfw.de/…261 (Stand 2026-05)",
+      source_href:"https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/F%C3%B6rderprodukte/Wohngeb%C3%A4ude-Kredit-(261)/",
+      hitl_note:"kein HITL nötig" },
+    { action_id:"a2", tool:"create_calendar_event", real:true, status:"awaiting_approval", approval:null,
+      llm_model:MODEL, summary:"Folgetermin Mi 14:00?",
+      detail:'Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Echte Kalender-Einladung wird verschickt.',
+      prompt:"Soll ich den Termin jetzt anlegen und die Einladung senden?",
+      hitl_note:"HITL erforderlich" },
+    { action_id:"a3", tool:"send_mail", real:true, status:"executing", approval:"granted",
+      llm_model:MODEL, summary:"Unterlagen-Mail an Kunden",
+      detail:'Freigegeben um 11:21 · sende Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Mail landet live.</em>',
+      hitl_note:"HITL freigegeben" },
+    { action_id:"a4", tool:"crm_upsert", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Kunde aktualisiert (Vorschau · next integration)",
+      detail:"Stub – noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation. Wird in der nächsten Integration echt.",
+      hitl_note:"kein echter Schreibzugriff" },
+    { action_id:"a5", tool:"create_ticket", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Ticket angelegt (Vorschau · next integration)",
+      detail:"Stub – Ticketsystem folgt im nächsten Schritt. Noch keine echte Anlage.",
+      hitl_note:"kein echter Schreibzugriff" }
+  ];
+
+  var fallbackTimer = setTimeout(function(){
+    if(liveReceived) return;
+    isFallback = true;
+    hydrate(FALLBACK);
+    render();
+  }, 1500);
+
+  /* =========================================================================
+     EventSource — snapshot (re-hydrate) / action (upsert) / ping (ignore).
+     Survives a drop and re-hydrates from the NEXT snapshot, no reload.
+     ========================================================================= */
+  function markLive(){
+    if(!liveReceived){
+      liveReceived = true;
+      isFallback = false;
+      clearTimeout(fallbackTimer);
+      fbNote.classList.remove("show");
+      listEl.classList.remove("fallback");
+    }
+  }
+  function setConn(up){
+    connEl.setAttribute("data-conn", up ? "up" : "down");
+    connText.textContent = up ? "Live verbunden" : "Verbindung … erneuter Versuch";
+  }
+
+  if(typeof EventSource !== "undefined"){
+    try{
+      var es = new EventSource("/events");
+
+      es.addEventListener("ping", function(){ /* ignore keep-alive */ });
+
+      es.addEventListener("snapshot", function(ev){
+        try{
+          var arr = JSON.parse(ev.data);
+          markLive();                 // any live event overrides fallback
+          hydrate(arr);               // wholesale re-hydrate (also recovers post-drop)
+          render();
+        }catch(e){}
+      });
+
+      es.addEventListener("action", function(ev){
+        try{
+          var a = JSON.parse(ev.data);
+          markLive();
+          upsert(a);                  // upsert by action_id
+          render();
+        }catch(e){}
+      });
+
+      es.onopen  = function(){ setConn(true); };
+      es.onerror = function(){
+        // SSE dropped — show reconnecting; browser auto-retries. We KEEP the
+        // current render and re-hydrate cleanly from the next snapshot.
+        setConn(false);
+      };
+    }catch(e){ /* no server -> fallback handles it */ }
+  }
+})();
+</script>
+</body>
+</html>
