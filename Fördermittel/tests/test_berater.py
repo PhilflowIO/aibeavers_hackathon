@@ -7,6 +7,13 @@ construction helpers are importable.
 
 from __future__ import annotations
 
+import pytest
+
+# foerder.berater pulls in the optional `agent` dependency group (langchain*).
+# Skip this module cleanly when that group isn't installed, so the default
+# `uv run pytest` still collects the rest of the suite instead of erroring.
+pytest.importorskip("langchain")
+
 from foerder.berater import (
     BERATER_SYSTEM,
     MCP_SERVERS,
