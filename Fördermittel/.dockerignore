@@ -1,0 +1,31 @@
+# Build context is the Fördermittel root. Keep the image lean and the context
+# small — data is fetched at runtime, the venv/caches are rebuilt inside.
+
+# Runtime data (fetched live / re-ingested; mounted as a volume in compose)
+data/
+
+# Local virtualenv + tokenizer cache (rebuilt / re-downloaded in the image)
+.venv/
+.hf_cache/
+
+# Tooling caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+
+# VCS + editor + project meta not needed at build time
+.git/
+.gitignore
+.dockerignore
+docker/.env
+docker/.env.example
+tests/
+BUILD_PROMPT.md
+
+# Runtime artifacts
+*.duckdb
+qdrant_storage/
