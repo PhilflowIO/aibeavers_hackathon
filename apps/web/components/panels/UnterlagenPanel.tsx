@@ -18,23 +18,43 @@ export function UnterlagenPanel({ actions, execution }: UnterlagenPanelProps) {
     );
   }
   const status = execution?.status ?? "pending";
-  const isDone = status === "success" || status === "mocked";
+  // Echter Live-Versand nur bei success MIT external_id.
+  const isLive = status === "success" && execution?.isLive === true;
+  // Mock: 'mocked' oder success ohne external_id.
+  const isMocked = status === "mocked" || (status === "success" && !isLive);
+  const isDone = isLive || isMocked;
   const isError = status === "error";
-  const helper = isDone
-    ? "Entwurf ausgeführt — bereit zum Versand"
-    : isError
-      ? "Entwurf konnte nicht ausgeführt werden"
-      : "Entwurf wird vorbereitet";
-  const footer = isDone
-    ? "✓ Entwurf vom Agent erstellt · Anhänge: Riester-Unterlagen.pdf"
-    : isError
-      ? "Fehler bei der Ausführung · Demo läuft weiter"
-      : "Entwurf in Arbeit · Anhänge werden vorbereitet";
+  const helper = isLive
+    ? "E-Mail versendet — Entwurf ausgeführt"
+    : isMocked
+      ? "Entwurf vorbereitet (Demo) — kein realer Versand"
+      : isError
+        ? "Entwurf konnte nicht ausgeführt werden"
+        : "Entwurf wird vorbereitet";
+  const footer = isLive
+    ? "✓ E-Mail vom Agent versendet · Anhänge: Riester-Unterlagen.pdf"
+    : isMocked
+      ? "Entwurf vom Agent vorbereitet (Demo) · Anhänge: Riester-Unterlagen.pdf"
+      : isError
+        ? "Fehler bei der Ausführung · Demo läuft weiter"
+        : "Entwurf in Arbeit · Anhänge werden vorbereitet";
 
   return (
     <article className="flex h-full flex-col">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-50">Unterlagen & E-Mail</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-zinc-50">Unterlagen & E-Mail</h2>
+          {isLive && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
+              Live versendet
+            </span>
+          )}
+          {isMocked && (
+            <span className="rounded-full bg-zinc-700/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Mock / Demo
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-sm text-zinc-500">{helper}</p>
       </header>
 
@@ -59,7 +79,7 @@ Freundliche Grüße
 Ihr Beratungsteam`}
         </pre>
 
-        <div className={`border-t border-zinc-800 px-4 py-2 text-xs ${isDone ? "text-emerald-500/90" : isError ? "text-rose-300" : "text-zinc-400"}`}>
+        <div className={`border-t border-zinc-800 px-4 py-2 text-xs ${isLive ? "text-emerald-700" : isError ? "text-rose-700" : "text-zinc-400"}`}>
           {footer}
         </div>
       </div>

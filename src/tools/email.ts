@@ -31,6 +31,10 @@ function getTransport() {
     port: cfg.SMTP_PORT,
     secure: cfg.SMTP_SECURE,
     auth: { user: cfg.SMTP_USER, pass: cfg.SMTP_PASSWORD },
+    // Fail-fast auf der Bühne: ein toter SMTP-Server darf die Live-Demo nicht
+    // minutenlang blockieren (Default-Timeouts sind deutlich höher).
+    connectionTimeout: 10_000,
+    socketTimeout: 10_000,
   });
   return _transport;
 }

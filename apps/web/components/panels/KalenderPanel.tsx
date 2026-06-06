@@ -26,23 +26,44 @@ export function KalenderPanel({ actions, execution }: KalenderPanelProps) {
   const start = resolveStart(kalender);
   const end = new Date(start.getTime() + (kalender.dauer_min ?? 60) * 60_000);
   const status = execution?.status ?? "pending";
-  const isDone = status === "success" || status === "mocked";
+  // Echter Live-Versand nur bei success MIT external_id.
+  const isLive = status === "success" && execution?.isLive === true;
+  // Mock: 'mocked' oder success ohne external_id.
+  const isMocked = status === "mocked" || (status === "success" && !isLive);
+  const isDone = isLive || isMocked;
   const isError = status === "error";
-  const helper = isDone
+  const helper = isLive
     ? "Kalendereintrag + Einladung versendet"
-    : isError
-      ? "Einladung konnte nicht versendet werden"
-      : "Kalendereintrag + Einladung wird vorbereitet";
-  const panelTone = isDone
-    ? "border-sky-500/30 bg-sky-500/5"
-    : isError
-      ? "border-rose-500/30 bg-rose-500/5"
-      : "border-zinc-700 bg-zinc-900/60";
+    : isMocked
+      ? "Kalendereintrag + Einladung vorbereitet (Demo)"
+      : isError
+        ? "Einladung konnte nicht versendet werden"
+        : "Kalendereintrag + Einladung wird vorbereitet";
+  const panelTone = isLive
+    ? "border-sky-300 bg-sky-50"
+    : isMocked
+      ? "border-zinc-700 bg-zinc-900/60"
+      : isError
+        ? "border-rose-300 bg-rose-50"
+        : "border-zinc-700 bg-zinc-900/60";
 
   return (
     <article className="flex h-full flex-col">
       <header className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-50">Folgetermin</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-zinc-50">Folgetermin</h2>
+          {isLive && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-800">
+              Live versendet
+              {execution?.externalId ? ` · ${execution.externalId}` : ""}
+            </span>
+          )}
+          {isMocked && (
+            <span className="rounded-full bg-zinc-700/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Mock / Demo
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-sm text-zinc-500">{helper}</p>
       </header>
 
@@ -64,7 +85,7 @@ export function KalenderPanel({ actions, execution }: KalenderPanelProps) {
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Agenda</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-sky-800">Agenda</p>
           <ul className="mt-2 space-y-2">
             {DEFAULT_AGENDA.map((item, i) => (
               <li

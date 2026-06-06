@@ -123,6 +123,8 @@ export function AppShell({ transcript }: AppShellProps) {
 
       <HeroMailToast
         visible={showToast}
+        isLive={heroExecution?.isLive ?? false}
+        externalId={heroExecution?.externalId}
         onDismiss={() => setMailToastDismissed(true)}
       />
     </div>

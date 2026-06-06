@@ -8,10 +8,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        zinc: {
+          50: "#0f172a",
+          100: "#111827",
+          200: "#1f2937",
+          300: "#334155",
+          400: "#475569",
+          500: "#64748b",
+          600: "#94a3b8",
+          700: "#cbd5e1",
+          800: "#e2e8f0",
+          900: "#f8fafc",
+          950: "#ffffff",
+        },
         surface: {
-          DEFAULT: "#0f172a",
-          raised: "#1e293b",
-          border: "#334155",
+          DEFAULT: "#ffffff",
+          raised: "#f8fafc",
+          border: "#dbe4ef",
         },
         accent: {
           DEFAULT: "#10b981",

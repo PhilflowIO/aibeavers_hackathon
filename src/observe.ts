@@ -178,11 +178,41 @@ function gate(orig: {
   );
 }
 
+/**
+ * Wrap a read-only tool in a thin try/catch that turns a thrown error into a
+ * string. A dead CardDAV/CalDAV read (search_contacts, list_calendar_events …)
+ * should degrade to a readable message for the LLM — not abort the whole run.
+ * Side-effect tools keep their own catch inside `gate` (incl. UI error card).
+ */
+function resilient(orig: {
+  name: string;
+  description: string;
+  schema: unknown;
+  invoke: (args: unknown) => Promise<unknown>;
+}) {
+  return tool(
+    async (args: unknown) => {
+      try {
+        return await orig.invoke(args);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return `Tool „${orig.name}" ist fehlgeschlagen: ${message}`;
+      }
+    },
+    {
+      name: orig.name,
+      description: orig.description,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      schema: orig.schema as any,
+    }
+  );
+}
+
 /** The full production toolset, with side-effect tools wrapped in the HITL gate. */
 async function gatedTools() {
   const full = await buildToolset();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return full.map((t: any) => (isSideEffect(t.name) ? gate(t) : t));
+  return full.map((t: any) => (isSideEffect(t.name) ? gate(t) : resilient(t)));
 }
 
 /** Run the agent on an instruction, emitting contract-shaped events as it acts. */
