@@ -4,6 +4,7 @@ import { createLlm } from "./llm.js";
 import { allTools } from "./tools/index.js";
 import { loadPipedriveTools } from "./tools/pipedrive.js";
 import { loadFoerderTools } from "./tools/foerder.js";
+import { contactTools } from "./tools/contacts.js";
 
 export const SYSTEM_PROMPT = `Du bist der Nacharbeits-Agent eines selbstständigen Finanzberaters.
 
@@ -32,15 +33,20 @@ Arbeitsweise:
      Treffer mit get_program. Nenne Fördersätze, Beträge, Einkommensgrenzen und Fristen
      NUR, wenn sie im get_program-Datensatz stehen — niemals aus deinem Allgemeinwissen.
      Steht eine Zahl nicht im Datensatz, verweise auf den Link statt sie zu erfinden.
-  6. Erfinde NIEMALS Termine, Adressen oder Inhalte. Fehlt eine Information, frage nach
+  6. Bevor du eine Einladung oder E-Mail an einen Kunden sendest, bestimme die Empfänger-
+     Adresse mit resolve_contact (Name des Kunden) — verlasse dich NICHT allein auf eine im
+     Transkript genannte E-Mail (die kann z.B. die des Beraters sein). Wenn resolve_contact
+     resolved:false liefert (kein oder mehrdeutiger Treffer), sende NICHT, sondern melde die
+     Lücke und frag nach. So ist auch belegt, mit wem das Gespräch war.
+  7. Erfinde NIEMALS Termine, Adressen oder Inhalte. Fehlt eine Information, frage nach
      oder benenne die Lücke klar.
-  7. Antworte knapp auf Deutsch und berichte am Ende, welche Aktionen du ausgeführt hast.`;
+  8. Antworte knapp auf Deutsch und berichte am Ende, welche Aktionen du ausgeführt hast.`;
 
 /** The full production toolset: local tools + the dynamically-loaded Pipedrive CRM tools. */
 export async function buildToolset(): Promise<unknown[]> {
   const pipedriveTools = await loadPipedriveTools();
   const foerderTools = await loadFoerderTools();
-  return [...allTools, ...pipedriveTools, ...foerderTools];
+  return [...allTools, ...contactTools, ...pipedriveTools, ...foerderTools];
 }
 
 /**
