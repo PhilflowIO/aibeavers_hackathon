@@ -58,6 +58,10 @@ function isAllowedLiveDemoRequest(
   });
 }
 
+function hasDuplicateActionTypes(actions: Action[]): boolean {
+  return new Set(actions.map((action) => action.typ)).size !== actions.length;
+}
+
 function hasLiveExecutionSecret(request: Request): boolean {
   const secret = process.env.LIVE_ACTION_EXECUTION_SECRET?.trim();
   if (!secret) return false;
@@ -178,6 +182,13 @@ export async function POST(request: Request) {
     }
 
     const { kunde, kunde_email, actions } = parsed.data;
+    if (hasDuplicateActionTypes(actions)) {
+      return NextResponse.json(
+        { error: "Doppelte Aktionen sind nicht erlaubt." },
+        { status: 400 },
+      );
+    }
+
     const results: ActionResult[] = [];
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
     const liveActionsEnabled =
