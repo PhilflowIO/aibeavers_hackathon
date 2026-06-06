@@ -56,7 +56,7 @@ rebuild always reflects the current public data.
 ### Docker (self-contained — the intended path)
 
 ```bash
-cp docker/.env.example .env          # set DEEPINFRA_TOKEN=...
+cp docker/.env.example docker/.env   # set DEEPINFRA_TOKEN=...
 docker compose -f docker/docker-compose.yml up -d qdrant
 # one-shot ingest: fetch/clean -> dense (DeepInfra) + German sparse -> Qdrant + DuckDB
 docker compose -f docker/docker-compose.yml run --rm app foerder-ingest
