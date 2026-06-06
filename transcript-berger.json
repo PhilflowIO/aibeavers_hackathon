@@ -1,0 +1,24 @@
+{
+  "_hinweis": "Demo-Transkript A — Empfänger-Auflösung über CRM/Pipedrive. Thomas Berger steht NICHT im CardDAV-Adressbuch, aber als Person im Pipedrive-CRM (mit E-Mail). kunde_email ist bewusst null: die Sende-Adresse wird vom Agenten via resolve_contact aufgelöst (Quelle: pipedrive), nicht aus dem Transkript geraten.",
+  "kunde": "Thomas Berger",
+  "kunde_email": null,
+  "meetings": [
+    {
+      "meeting_id": "berger-1",
+      "titel": "Erstberatung Baufinanzierung / Wohneigentum",
+      "datum": "2026-06-03",
+      "_demo_anker": "Hauskauf NRW Bestand + geplante energetische Sanierung = Förder-Anlass (Wohneigentum/BEG). Folgetermin 'in zwei Wochen'. Keine E-Mail genannt -> Auflösung via Pipedrive.",
+      "segments": [
+        {"speaker": "Berater", "start_sec": 0, "end_sec": 11, "text": "Schön, dass Sie da sind, Herr Berger. Sie hatten gesagt, es geht um eine Immobilienfinanzierung — erzählen Sie mal, was Sie vorhaben."},
+        {"speaker": "Kunde", "start_sec": 11, "end_sec": 27, "text": "Genau. Meine Frau und ich wollen ein Einfamilienhaus kaufen, hier in Nordrhein-Westfalen. Es ist ein Bestandsbau, Baujahr 1998, der Kaufpreis liegt bei etwa 420.000 Euro."},
+        {"speaker": "Berater", "start_sec": 27, "end_sec": 36, "text": "Verstanden. Wie sieht es mit Eigenkapital und Ihrer beruflichen Situation aus?"},
+        {"speaker": "Kunde", "start_sec": 36, "end_sec": 52, "text": "Wir haben rund 80.000 Euro Eigenkapital. Ich bin angestellt im Maschinenbau, unbefristet, zwei Kinder, vier und sieben. Meine Frau arbeitet Teilzeit."},
+        {"speaker": "Berater", "start_sec": 52, "end_sec": 63, "text": "Gut. Und planen Sie am Haus nach dem Kauf noch etwas — energetisch zum Beispiel?"},
+        {"speaker": "Kunde", "start_sec": 63, "end_sec": 80, "text": "Ja, das Dach soll gedämmt werden und die alte Gasheizung wollen wir mittelfristig rauswerfen. Wenn es da Förderung gibt, würde ich die natürlich gerne mitnehmen."},
+        {"speaker": "Berater", "start_sec": 80, "end_sec": 95, "text": "Da gibt es einiges — sowohl für den Erwerb als auch für die Sanierung. Ich schaue Ihnen die passenden Programme heraus. Lassen Sie uns die Finanzierung beim nächsten Termin konkret durchrechnen."},
+        {"speaker": "Kunde", "start_sec": 95, "end_sec": 104, "text": "Sehr gern. Können wir das in zwei Wochen machen? Vormittags passt mir am besten."},
+        {"speaker": "Berater", "start_sec": 104, "end_sec": 116, "text": "Mache ich. Ich lege einen Folgetermin an und schicke Ihnen die Einladung sowie eine erste Übersicht der Förderprogramme zu. Bis dahin halte ich die Eckdaten fest."}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "_hinweis": "Demo-Transkript B — Empfänger-Auflösung über CardDAV. Ilona Hansen steht NICHT im Pipedrive-CRM, aber im CardDAV-Adressbuch des Beraters (mit E-Mail). kunde_email ist bewusst null: die Sende-Adresse wird vom Agenten via resolve_contact aufgelöst (Quelle: carddav), nicht aus dem Transkript geraten.",
+  "kunde": "Ilona Hansen",
+  "kunde_email": null,
+  "meetings": [
+    {
+      "meeting_id": "hansen-1",
+      "titel": "Beratung energetische Sanierung / Heizungstausch",
+      "datum": "2026-06-04",
+      "_demo_anker": "Eigentümerin Bayern, Bestand, Dachdämmung + Wärmepumpe = Förder-Anlass (BEG EM). Folgetermin 'nächste Woche'. Keine E-Mail genannt -> Auflösung via CardDAV.",
+      "segments": [
+        {"speaker": "Berater", "start_sec": 0, "end_sec": 10, "text": "Hallo Frau Hansen, schön dass es klappt. Sie wollten über die Sanierung Ihres Hauses sprechen — was steht an?"},
+        {"speaker": "Kunde", "start_sec": 10, "end_sec": 28, "text": "Ja, ich besitze ein Einfamilienhaus in Bayern, Baujahr 1991. Das Dach ist schlecht gedämmt und die Gasheizung ist uralt. Ich möchte das Dach dämmen und auf eine Wärmepumpe umstellen."},
+        {"speaker": "Berater", "start_sec": 28, "end_sec": 37, "text": "Eine sinnvolle Kombination. Haben Sie ein Budget im Kopf, und bewohnen Sie das Haus selbst?"},
+        {"speaker": "Kunde", "start_sec": 37, "end_sec": 53, "text": "Ich wohne selbst drin. Budget liegt bei ungefähr 35.000 Euro. Ich bin selbstständige Architektin, von daher kenne ich die Bauseite — die Förderseite aber nicht."},
+        {"speaker": "Berater", "start_sec": 53, "end_sec": 66, "text": "Genau da kann ich helfen. Für Heizungstausch und Dämmung im Bestand gibt es Zuschüsse und zinsgünstige Kredite. Ich stelle Ihnen die passenden Programme zusammen."},
+        {"speaker": "Kunde", "start_sec": 66, "end_sec": 74, "text": "Perfekt. Sollen wir die Details nächste Woche besprechen? Ich habe vormittags Zeit."},
+        {"speaker": "Berater", "start_sec": 74, "end_sec": 87, "text": "Machen wir. Ich lege einen Folgetermin an, schicke Ihnen die Einladung und parallel eine kurze Förder-Shortlist. Die wichtigsten Eckdaten notiere ich mir gleich."}
+      ]
+    }
+  ]
+}

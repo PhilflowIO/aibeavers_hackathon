@@ -66,13 +66,32 @@ function buildBriefing(x: ExtractedActions): string {
   // AUFGABE 1 — Folgetermin (Hero-Flow: anlegen + echte Einladung).
   if (x.folgetermin) {
     const f = x.folgetermin;
+    // Empfänger-Name für die Identitäts-Erdung: bevorzugt der CRM-Kundenname,
+    // sonst der im Termin genannte Teilnehmer. Die E-Mail wird NICHT aus dem
+    // Transkript übernommen, sondern via resolve_contact verifiziert.
+    const lookupName = x.crm_update?.kunde_name ?? f.attendee_name;
     if (f.start_iso && f.end_iso) {
       const detail = [
         field("Titel", f.title),
         field("Ort", f.location),
         field("Teilnehmer", f.attendee_name),
-        field("Teilnehmer-E-Mail", f.attendee_email),
+        field("Im Transkript genannte E-Mail (NICHT blind verwenden)", f.attendee_email),
       ].filter(Boolean);
+
+      // Empfänger-Auflösung VOR dem Versand: resolve_contact ist die Quelle der
+      // Wahrheit für die Adresse — die Transkript-Mail kann die des Beraters sein.
+      const recipientResolution = lookupName
+        ? "→ Schritt 0 (Empfänger bestimmen): Rufe resolve_contact mit name = \"" +
+          lookupName +
+          "\"" +
+          (f.attendee_email ? ` (email_hint = "${f.attendee_email}")` : "") +
+          " auf. Verwende für den Versand AUSSCHLIESSLICH die so verifizierte E-Mail, " +
+          "nicht die im Transkript genannte. Weicht die verifizierte Adresse von der " +
+          "Transkript-Adresse ab, bevorzuge die verifizierte und weise auf die Abweichung hin. " +
+          "Liefert resolve_contact resolved:false (kein/mehrdeutiger Treffer), versende KEINE " +
+          "Einladung, sondern benenne die Lücke und frag nach.\n"
+        : "→ Schritt 0: Es ist kein Kundenname bekannt — der Empfänger lässt sich nicht " +
+          "verifizieren. Versende KEINE Einladung; weise auf die fehlende Identität hin.\n";
 
       // Schritt-Anweisung: bei Terminvorschlag erst freien Slot suchen,
       // sonst die im Gespräch vereinbarte Zeit direkt verwenden.
@@ -91,12 +110,14 @@ function buildBriefing(x: ExtractedActions): string {
         "\nAUFGABE 1 — Folgetermin anlegen und einladen:\n" +
           detail.join("\n") +
           "\n" +
+          recipientResolution +
           scheduling +
-          (f.attendee_email
+          (lookupName
             ? "\n→ Schritt 3: Schicke die Einladung via send_email (ICS-Block im Feld " +
-              "icalEvent) an die Teilnehmer-E-Mail."
-            : "\n→ ACHTUNG: keine Kunden-E-Mail bekannt — versende KEINE Einladung, sondern " +
-              "weise ausdrücklich darauf hin, dass die Adresse fehlt.")
+              "icalEvent) an die in Schritt 0 verifizierte E-Mail-Adresse (NICHT an die " +
+              "Transkript-Adresse). Nur senden, wenn der Empfänger aufgelöst werden konnte."
+            : "\n→ ACHTUNG: kein Kundenname bekannt — der Empfänger ist nicht verifizierbar; " +
+              "versende KEINE Einladung, sondern weise ausdrücklich darauf hin.")
       );
     } else {
       parts.push(
@@ -110,12 +131,16 @@ function buildBriefing(x: ExtractedActions): string {
 
   // AUFGABE 2 — Unterlagen per E-Mail anfordern/zusenden.
   if (x.unterlagen.length) {
+    const kundeName = x.crm_update?.kunde_name ?? x.folgetermin?.attendee_name;
     parts.push(
       "\nAUFGABE 2 — Unterlagen per E-Mail anfordern/zusenden:\n" +
         x.unterlagen.map((u) => `  • ${u}`).join("\n") +
-        (x.folgetermin?.attendee_email
-          ? "\n→ Formuliere eine kurze, freundliche E-Mail an die oben genannte Kunden-E-Mail."
-          : "\n→ Sobald die Kunden-E-Mail vorliegt, per send_email anfordern.")
+        (kundeName
+          ? "\n→ Bestimme den Empfänger mit resolve_contact (Name: \"" +
+            kundeName +
+            "\") und formuliere eine kurze, freundliche E-Mail an die so verifizierte Adresse. " +
+            "Bei resolved:false NICHT senden, sondern die Lücke melden."
+          : "\n→ Sobald ein Kundenname/eine verifizierte E-Mail vorliegt, per send_email anfordern.")
     );
   }
 
