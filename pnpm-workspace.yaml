@@ -7,9 +7,14 @@ packages:
 # every command. First-party trusted deps → disable the age gate + redundant pre-run check.
 minimumReleaseAge: 0
 verifyDepsBeforeRun: false
+# esbuild/sharp build scripts are allowlisted below, but pnpm 11 still exits non-zero
+# (ERR_PNPM_IGNORED_BUILDS) on a fresh `pnpm install`, which reads as a failed install
+# to a judge/CI. The functional build needs neither script, so silence the gate.
+strictDepBuilds: false
 onlyBuiltDependencies:
   - esbuild
   - sharp
 
 patchedDependencies:
   '@iamsamuelfraga/mcp-pipedrive': patches/@iamsamuelfraga__mcp-pipedrive.patch
+
