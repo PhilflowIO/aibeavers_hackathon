@@ -10,8 +10,8 @@ Beratungsgespräch führt er die Folgeaktionen **selbst aus** — er fasst nicht
 er HANDELT: Folgetermin anlegen + echte Kalender-Einladung verschicken, später CRM-
 Eintrag und Antrags-Vorbereitung.
 
-> Produkt-Kanon: `02-KONZEPT-der-nacharbeits-agent.md` (überschreibt `00-FINAL` und `01`).
-> Architektur-Brief: `architektur-fuer-jacob.md`. Bei Konflikt gewinnt das Konzept-02.
+> Produkt-Kanon: `docs/02-KONZEPT-der-nacharbeits-agent.md` (überschreibt `00-FINAL` und `01`).
+> Architektur-Brief: `docs/architektur-fuer-jacob.md`. Bei Konflikt gewinnt das Konzept-02.
 
 **Aktueller Meilenstein (Schritt 1):** Der Agent kann
 - E-Mails **senden** (SMTP) und **empfangen/lesen** (IMAP)
