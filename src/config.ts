@@ -86,10 +86,10 @@ export const loadSmtpConfig = () =>
     SMTP_HOST: process.env.SMTP_HOST,
     SMTP_PORT: process.env.SMTP_PORT,
     SMTP_SECURE: process.env.SMTP_SECURE,
-    SMTP_USER: process.env.SMTP_User,
-    SMTP_PASSWORD: process.env.SMTP_Key,
+    SMTP_USER: process.env.SMTP_User ?? process.env.SMTP_USER,
+    SMTP_PASSWORD: process.env.SMTP_Key ?? process.env.SMTP_PASSWORD,
     // Absender = explizit gesetztes SMTP_FROM, sonst der Login-User.
-    SMTP_FROM: process.env.SMTP_FROM ?? process.env.SMTP_User,
+    SMTP_FROM: process.env.SMTP_FROM ?? process.env.SMTP_User ?? process.env.SMTP_USER,
   });
 
 export const loadImapConfig = () =>
@@ -98,8 +98,8 @@ export const loadImapConfig = () =>
     IMAP_PORT: process.env.IMAP_PORT,
     IMAP_SECURE: process.env.IMAP_SECURE,
     // Gleiches Postfach wie SMTP — IMAP_*-Override möglich, sonst SMTP-Creds.
-    IMAP_USER: process.env.IMAP_User ?? process.env.SMTP_User,
-    IMAP_PASSWORD: process.env.IMAP_Key ?? process.env.SMTP_Key,
+    IMAP_USER: process.env.IMAP_User ?? process.env.IMAP_USER ?? process.env.SMTP_User ?? process.env.SMTP_USER,
+    IMAP_PASSWORD: process.env.IMAP_Key ?? process.env.IMAP_PASSWORD ?? process.env.SMTP_Key ?? process.env.SMTP_PASSWORD,
   });
 
 export const loadCaldavConfig = () =>
