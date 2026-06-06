@@ -64,7 +64,7 @@ Der **Agent-Layer (Schritt 1)** — das Fundament, auf dem die Demo läuft: ein 
 | Schicht | Technologie |
 |---|---|
 | **Agent** | [LangChain 1.x](https://github.com/langchain-ai/langchainjs) — `createAgent({ model, tools, systemPrompt })` |
-| **LLM** | Claude (`@langchain/anthropic`, Default `claude-opus-4-8`, temp 0 = deterministisch) |
+| **LLM** | Qwen (`@langchain/openai` über OpenAI-kompatible API, Default `qwen-max`, temp 0 = deterministisch) |
 | **Mail** | `nodemailer` (SMTP senden) · `imapflow` + `mailparser` (IMAP empfangen) |
 | **Kalender** | `tsdav` (CalDAV — Nextcloud/Fastmail/Google) · `ics` (iCalendar-Generierung) |
 | **Runtime** | Node 22 · TypeScript (ESM) · `tsx` · `zod`-validiertes ENV |
@@ -97,7 +97,7 @@ pnpm agent
 
 | | Rolle |
 |---|---|
-| **Jakob** | Hardcore-Coder — Agent-Verdrahtung, UI (Plan-Checkliste + Panels), echter Kalender-/Mail-Akt, Deploy |
+| **Jacob** | Hardcore-Coder — Agent-Verdrahtung, UI (Plan-Checkliste + Panels), echter Kalender-/Mail-Akt, Deploy |
 | **Phil** | Produkt + Pitch + Agent-Hirn — System-Prompts, JSON-Contract, Demo-Transkript, Compliance-Domäne, Deck |
 
 ## Demo (3 Min — jeder Beat ist ein ausgeführter Akt)

@@ -16,9 +16,15 @@ const bool = (def: boolean) =>
     .optional()
     .transform((v) => (v == null ? def : v.toLowerCase() === "true"));
 
+// Qwen über die OpenAI-kompatible API (DashScope o.ä. Sponsor-Endpoint).
+// Endpoint + Modell sind ENV-konfigurierbar, weil der Sponsor den Key stellt.
 const llmSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY fehlt"),
-  ANTHROPIC_MODEL: z.string().default("claude-opus-4-8"),
+  QWEN_API_KEY: z.string().min(1, "QWEN_API_KEY fehlt"),
+  QWEN_BASE_URL: z
+    .string()
+    .url()
+    .default("https://dashscope-intl.aliyuncs.com/compatible-mode/v1"),
+  QWEN_MODEL: z.string().default("qwen-max"),
 });
 
 const smtpSchema = z.object({

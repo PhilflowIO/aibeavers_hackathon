@@ -23,7 +23,9 @@ Eintrag und Antrags-Vorbereitung.
 - **Agent:** LangChain **1.x** — `createAgent({ model, tools, systemPrompt })` aus dem
   `langchain`-Hauptpaket. ⚠️ NICHT die alte `createReactAgent`-API aus
   `@langchain/langgraph/prebuilt` — die ist in 1.x deprecated.
-- **LLM:** Claude (`@langchain/anthropic`, Default `claude-opus-4-8`, temp 0).
+- **LLM:** Qwen über die OpenAI-kompatible API (`@langchain/openai` `ChatOpenAI` mit
+  `configuration.baseURL`, Default `qwen-max`, temp 0). Endpoint/Modell per ENV, weil der
+  Hackathon-Sponsor den Key stellt.
 - **Mail:** `nodemailer` (SMTP senden), `imapflow` + `mailparser` (IMAP empfangen).
 - **Kalender:** `tsdav` (CalDAV) + `ics` (iCalendar-Generierung).
 - **Config:** `zod`-validiertes ENV, lazy pro Subsystem (`src/config.ts`).
@@ -33,7 +35,7 @@ Eintrag und Antrags-Vorbereitung.
 ```
 src/
   config.ts          zod-validiertes ENV, lazy loader pro Subsystem
-  llm.ts             Claude-Modell-Factory
+  llm.ts             Qwen-Modell-Factory (OpenAI-kompatibel)
   agent.ts           createAgent(...) + runAgent(input) Helfer
   index.ts           CLI: einmal-Aufruf (arg) oder REPL
   tools/
