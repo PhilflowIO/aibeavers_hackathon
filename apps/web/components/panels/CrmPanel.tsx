@@ -19,40 +19,56 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
   }
 
   const status = execution?.status ?? "pending";
+  const isPending = status === "pending";
   const isError = status === "error";
   const liveBadge =
     execution?.status === "success" && execution.provider && execution.provider !== "mock";
+  const isMocked = status === "mocked" || (status === "success" && !liveBadge);
   const panelTone = isError
     ? "border-rose-500/30 bg-rose-500/5"
-    : "border-emerald-500/30 bg-emerald-500/5";
+    : isPending || isMocked
+      ? "border-zinc-700 bg-zinc-900/60"
+      : "border-emerald-500/30 bg-emerald-500/5";
   const iconTone = isError
     ? "bg-rose-500/20 text-rose-300"
-    : "bg-emerald-500/20 text-emerald-300";
-  const labelTone = isError ? "text-rose-300" : "text-emerald-400";
+    : isPending || isMocked
+      ? "bg-zinc-700/80 text-zinc-300"
+      : "bg-emerald-500/20 text-emerald-300";
+  const labelTone = isError
+    ? "text-rose-300"
+    : isPending || isMocked
+      ? "text-zinc-300"
+      : "text-emerald-400";
   const heading =
-    status === "pending"
+    isPending
       ? "CRM — wird angelegt"
       : isError
         ? "CRM — Fehler"
-        : "CRM — ausgeführt";
+        : isMocked
+          ? "CRM — Mock"
+          : "CRM — ausgeführt";
   const helper =
-    status === "pending"
+    isPending
       ? "Aufgabe wird im CRM vorbereitet"
       : isError
         ? "CRM-Schritt ist fehlgeschlagen, Demo läuft weiter"
-        : "Aufgabe wurde angelegt, nicht nur vorgeschlagen";
+        : isMocked
+          ? "Sandbox nicht angebunden, Eintrag nur geplant"
+          : "Aufgabe wurde angelegt, nicht nur vorgeschlagen";
   const actionLabel = isError
     ? "crm_task fehlgeschlagen"
-    : status === "pending"
+    : isPending
       ? "crm_task läuft"
-      : "crm_task erstellt";
+      : isMocked
+        ? "crm_task geplant"
+        : "crm_task erstellt";
   const statusText =
-    status === "pending"
+    isPending
       ? "In Arbeit"
       : isError
         ? "Fehler · nicht angelegt"
-        : status === "mocked"
-          ? "Mock · geplant"
+        : isMocked
+          ? "Mock · nicht live angelegt"
           : "Offen · vom Agent angelegt";
 
   return (
@@ -65,7 +81,7 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
       <div className={`rounded-xl border p-5 ${panelTone}`}>
         <div className={`flex flex-wrap items-center gap-2 ${labelTone}`}>
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-sm ${iconTone}`}>
-            {isError ? "!" : "✓"}
+            {isError ? "!" : liveBadge ? "✓" : "-"}
           </span>
           <span className="text-xs font-semibold uppercase tracking-wider">
             {actionLabel}
@@ -96,7 +112,7 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
           </div>
           <div className="flex justify-between py-2">
             <dt className="text-zinc-500">Status</dt>
-            <dd className={`font-medium ${isError ? "text-rose-300" : "text-emerald-400"}`}>
+            <dd className={`font-medium ${isError ? "text-rose-300" : liveBadge ? "text-emerald-400" : "text-zinc-300"}`}>
               {statusText}
             </dd>
           </div>
