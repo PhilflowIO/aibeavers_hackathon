@@ -80,8 +80,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Embedding provider (DeepInfra, OpenAI-compatible). Behind an interface so
-    # TEI/self-hosted is a config switch (see foerder.embedding).
+    # Embedding provider, behind an interface (see foerder.embedding). "deepinfra"
+    # is the gold-set-calibrated default; "ollama" is a fully-local sovereign
+    # fallback (no external token). Both speak the OpenAI embeddings API.
     embedding_provider: str = "deepinfra"
     embedding_endpoint: str = "https://api.deepinfra.com/v1/openai/embeddings"
     embedding_model: str = "Qwen/Qwen3-Embedding-0.6B"
@@ -96,6 +97,11 @@ class Settings(BaseSettings):
     qwen_api_key: str = Field(default="", alias="DASHSCOPE_API_KEY")
     qwen_base_url: str = Field(default="", alias="QWEN_BASE_URL")
     qwen_model: str = "qwen3.7-max"
+
+    # Ollama local-embedding backend (used when embedding_provider == "ollama").
+    # bge-m3 is multilingual + 1024-dim, matching DENSE_DIM so the schema is unchanged.
+    ollama_embedding_endpoint: str = "http://localhost:11434/v1/embeddings"
+    ollama_embedding_model: str = "bge-m3"
 
     # Tokenizer for chunking (no torch needed). HF id; cached under hf_cache_dir.
     tokenizer_model: str = "Qwen/Qwen3-Embedding-0.6B"

@@ -91,8 +91,15 @@ client at the stdio entrypoint (`foerder-mcp`) locally, or the streamable-HTTP e
 |---|---|---|
 | `DEEPINFRA_TOKEN` | — | embedding API key (required for ingest/query) |
 | `FOERDER_QDRANT_URL` | _(unset → embedded)_ | Qdrant server URL; `http://qdrant:6333` in Docker |
-| `FOERDER_EMBEDDING_PROVIDER` | `deepinfra` | swap the embedding backend (provider interface) |
-| `FOERDER_EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-0.6B` | dense model (1024-dim) |
+| `FOERDER_EMBEDDING_PROVIDER` | `deepinfra` | embedding backend: `deepinfra` (calibrated default) or `ollama` (sovereign local) |
+| `FOERDER_EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-0.6B` | dense model (1024-dim) for the deepinfra provider |
+| `FOERDER_OLLAMA_EMBEDDING_MODEL` | `bge-m3` | local model (1024-dim) when provider=`ollama`; needs `ollama pull bge-m3` |
+| `FOERDER_OLLAMA_EMBEDDING_ENDPOINT` | `http://localhost:11434/v1/embeddings` | Ollama OpenAI-compatible endpoint |
+
+> **Sovereign offline path:** `FOERDER_EMBEDDING_PROVIDER=ollama` runs embeddings fully local
+> (no `DEEPINFRA_TOKEN`, no data leaving the box). bge-m3 is 1024-dim == `DENSE_DIM`, so the Qdrant
+> schema is unchanged — but it is **not** the gold-set-calibrated model, so re-run `eval.run_eval`
+> after a full re-ingest to recalibrate Hit@k/MRR.
 | `FOERDER_SEMANTIC_WEIGHT` | `0.7` | hybrid knob: `1.0` pure dense, `0.0` pure sparse |
 | `FOERDER_COLLECTION_NAME` | `foerderprogramme` | Qdrant collection |
 
