@@ -139,12 +139,12 @@ pnpm install && pnpm dev:web
 
 ## Einreichung
 
-Gebaut am **6. Juni 2026** beim **AI BEAVERS × Mollie Founder Hackathon** (Hamburg, House of AI). Der gesamte Commit-Verlauf stammt vom Hackathon-Tag.
+Gebaut am **6. Juni 2026** beim **AI BEAVERS × Mollie Founder Hackathon** (Hamburg, House of AI). Der gesamte Commit-Verlauf stammt vom Hackathon-Tag (nachprüfbar via `git log`).
 
-- **Repo:** `github.com/PhilflowIO/aibeavers_hackathon` (public)
+- **Repo:** [github.com/PhilflowIO/aibeavers_hackathon](https://github.com/PhilflowIO/aibeavers_hackathon) (public)
 - **Lizenz:** [MIT](LICENSE)
 - **Kontakt:** jacob@philflow.io
-- **Demo:** live auf der Bühne (3-Min-Pitch); lokal via `pnpm install` → `pnpm dev:web`.
+- **Demo:** live auf der Bühne (3-Min-Pitch); lokal `pnpm install` → `pnpm dev:web` → http://localhost:3000 (pnpm 11, Node ≥22 — die Install-Gates sind in `pnpm-workspace.yaml` vorkonfiguriert). Details: [Demo-UI](#demo-ui).
 
 <div align="center">
 
