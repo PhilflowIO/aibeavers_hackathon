@@ -12,7 +12,10 @@
     "start": "tsx src/index.ts",
     "agent": "tsx src/index.ts",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:web": "pnpm --filter web dev",
+    "build:web": "pnpm --filter web build",
+    "typecheck:web": "pnpm --filter web exec tsc --noEmit"
   },
   "license": "UNLICENSED",
   "dependencies": {
