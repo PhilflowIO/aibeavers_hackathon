@@ -48,7 +48,7 @@ export function QaPanel({ onAsk, loading = false }: QaPanelProps) {
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md bg-brass px-5 py-2 text-sm font-semibold text-canvas transition hover:bg-brass-hover disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-focus inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md bg-brass px-5 py-2 text-sm font-semibold text-canvas transition hover:bg-brass-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "…" : "Fragen"}
         </button>

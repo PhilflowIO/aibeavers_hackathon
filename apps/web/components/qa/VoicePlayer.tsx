@@ -75,7 +75,6 @@ export function VoicePlayer({ text, src }: VoicePlayerProps) {
           <audio
             ref={audioRef}
             controls
-            autoPlay
             preload="none"
             src={audioUrl}
             onPlay={() => setPlaying(true)}

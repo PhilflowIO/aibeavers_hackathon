@@ -2,6 +2,7 @@
 
 import type { DemoState } from "../../lib/demo-state";
 import type {
+  ActionExecutionInfo,
   AnalyseResult,
   CrmExecutionInfo,
   Meeting,
@@ -25,6 +26,7 @@ interface PanelOrchestratorProps {
   errorMessage: string | null;
   meetings?: Meeting[];
   crmExecution?: CrmExecutionInfo;
+  heroExecution?: ActionExecutionInfo;
   onRunQa: (frage: string) => void;
   onRetry?: () => void;
 }
@@ -36,6 +38,7 @@ export function PanelOrchestrator({
   errorMessage,
   meetings = [],
   crmExecution,
+  heroExecution,
   onRunQa,
   onRetry,
 }: PanelOrchestratorProps) {
@@ -72,8 +75,8 @@ export function PanelOrchestrator({
     case "panel_kalender":
       return (
         <div className="grid h-full gap-4 lg:grid-cols-2">
-          <KalenderPanel actions={analysis.actions} />
-          <UnterlagenPanel actions={analysis.actions} />
+          <KalenderPanel actions={analysis.actions} execution={heroExecution} />
+          <UnterlagenPanel actions={analysis.actions} execution={heroExecution} />
         </div>
       );
 
@@ -152,7 +155,7 @@ function DemoQaSection({
   return (
     <article className="flex h-full flex-col gap-4 overflow-y-auto">
       <header className="panel-heading">
-        <h2 className="panel-heading-title">Talk to your calls</h2>
+        <h2 className="panel-heading-title">Fragen ans Gesprächsarchiv</h2>
         <p className="panel-heading-sub">Cross-Call Q&A mit Quellenbelegen und Voice</p>
       </header>
 

@@ -27,6 +27,7 @@ export function AppShell({ transcript }: AppShellProps) {
     qaResult,
     errorMessage,
     showMailToast,
+    heroExecution,
     crmExecution,
     startAnalysis,
     advancePanel,
@@ -101,12 +102,12 @@ export function AppShell({ transcript }: AppShellProps) {
         <RoadmapBanner />
       </div>
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-1 gap-0 px-6 pb-8 lg:gap-2 lg:px-8">
-        <aside className="w-full shrink-0 border-border-subtle pr-0 lg:sticky lg:top-[7.5rem] lg:w-[min(30%,320px)] lg:self-start lg:border-r lg:pr-6 lg:pt-1">
+      <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-6 pb-8 lg:flex-row lg:gap-2 lg:px-8">
+        <aside className="w-full border-b border-border-subtle pb-6 lg:sticky lg:top-[7.5rem] lg:w-[min(30%,320px)] lg:shrink-0 lg:self-start lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6 lg:pt-1">
           <PlanChecklist steps={visiblePlanSteps} isRevealing={isRevealing} />
         </aside>
 
-        <section className="relative mt-6 min-h-[480px] flex-1 lg:mt-0 lg:pl-6">
+        <section className="relative min-h-[480px] flex-1 lg:pl-6">
           <AnalyzingOverlay visible={isAnalyzing} />
           <div className="panel-surface h-full p-5 lg:p-6">
             <PanelOrchestrator
@@ -116,6 +117,7 @@ export function AppShell({ transcript }: AppShellProps) {
               errorMessage={errorMessage}
               meetings={transcript.meetings}
               crmExecution={crmExecution ?? undefined}
+              heroExecution={heroExecution ?? undefined}
               onRunQa={runQa}
               onRetry={reset}
             />
@@ -125,6 +127,8 @@ export function AppShell({ transcript }: AppShellProps) {
 
       <HeroMailToast
         visible={showToast}
+        isLive={heroExecution?.isLive === true}
+        externalId={heroExecution?.externalId}
         onDismiss={() => setMailToastDismissed(true)}
       />
     </div>

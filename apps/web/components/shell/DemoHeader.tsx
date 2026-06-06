@@ -67,11 +67,11 @@ export function DemoHeader({
           </div>
 
           <div className="shrink-0 rounded-lg border border-border bg-canvas-raised/80 px-4 py-3 text-right shadow-[0_1px_0_oklch(1_0_0/0.03)_inset]">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
-              Mandant
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brass">
+              Nächster Beweis
             </p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-ink">{clientName}</p>
-            <p className="mt-0.5 font-mono text-xs text-ink-faint">
+            <p className="mt-0.5 text-sm font-semibold text-ink">Echte ICS-Einladung</p>
+            <p className="mt-0.5 font-mono text-xs text-ink-muted">
               {meetingId} · {meetingDate}
             </p>
           </div>

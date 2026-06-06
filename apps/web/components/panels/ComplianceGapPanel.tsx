@@ -49,7 +49,7 @@ export function ComplianceGapPanel({ gaps }: ComplianceGapPanelProps) {
 
 function GapCard({ gap }: { gap: ComplianceGap }) {
   return (
-    <div className="rounded-xl border-2 border-danger-border bg-danger-muted p-5 shadow-[0_12px_32px_-16px_oklch(0_0_0/0.5)]">
+    <div className="rounded-xl border-2 border-danger-border border-l-4 border-l-danger bg-danger-muted p-5 shadow-[0_12px_32px_-16px_oklch(0_0_0/0.5)]">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-danger-border bg-canvas-raised text-danger">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>

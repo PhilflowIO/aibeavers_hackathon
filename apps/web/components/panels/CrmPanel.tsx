@@ -11,11 +11,7 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
   const crmAction = actions.find((a): a is CrmTaskAction => a.typ === "crm_task");
 
   if (!crmAction) {
-    return (
-      <article className="flex h-full items-center justify-center text-sm text-zinc-500">
-        Kein CRM-Eintrag in den Aktionen.
-      </article>
-    );
+    return <article className="empty-state">Kein CRM-Eintrag in den Aktionen.</article>;
   }
 
   const status = execution?.status ?? "pending";
@@ -25,20 +21,20 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
     execution?.status === "success" && execution.provider && execution.provider !== "mock";
   const isMocked = status === "mocked" || (status === "success" && !liveBadge);
   const panelTone = isError
-    ? "border-rose-300 bg-rose-50"
+    ? "border-danger-border bg-danger-muted"
     : isPending || isMocked
-      ? "border-zinc-700 bg-zinc-900/60"
-      : "border-emerald-300 bg-emerald-50";
+      ? "border-border-subtle bg-canvas-raised/60"
+      : "border-sage/30 bg-sage-muted";
   const iconTone = isError
-    ? "bg-rose-100 text-rose-700"
+    ? "bg-danger-muted text-danger"
     : isPending || isMocked
-      ? "bg-zinc-700/80 text-zinc-300"
-      : "bg-emerald-100 text-emerald-700";
+      ? "bg-canvas-surface text-ink-muted"
+      : "bg-sage-muted text-sage";
   const labelTone = isError
-    ? "text-rose-700"
+    ? "text-danger"
     : isPending || isMocked
-      ? "text-zinc-300"
-      : "text-emerald-700";
+      ? "text-ink-muted"
+      : "text-sage";
   const heading =
     isPending
       ? "CRM — wird angelegt"
@@ -73,9 +69,9 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
 
   return (
     <article className="flex h-full flex-col">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-50">{heading}</h2>
-        <p className="mt-1 text-sm text-zinc-500">{helper}</p>
+      <header className="panel-heading">
+        <h2 className="panel-heading-title">{heading}</h2>
+        <p className="panel-heading-sub">{helper}</p>
       </header>
 
       <div className={`rounded-xl border p-5 ${panelTone}`}>
@@ -87,32 +83,32 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
             {actionLabel}
           </span>
           {liveBadge && (
-            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-800">
+            <span className="rounded-full bg-sage-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sage">
               Live · {execution.provider}
               {execution.externalId ? ` #${execution.externalId}` : ""}
             </span>
           )}
           {execution?.status === "mocked" && (
-            <span className="rounded-full bg-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-400">
+            <span className="rounded-full bg-canvas-surface px-2 py-0.5 text-[10px] text-ink-faint">
               Mock-Panel
             </span>
           )}
         </div>
 
-        <h3 className="mt-3 text-base font-semibold text-zinc-100">{crmAction.titel}</h3>
+        <h3 className="mt-3 text-base font-semibold text-ink">{crmAction.titel}</h3>
 
         <dl className="mt-4 grid gap-2 text-sm">
-          <div className="flex justify-between border-b border-zinc-800 py-2">
-            <dt className="text-zinc-500">Fälligkeit</dt>
-            <dd className="font-medium text-zinc-200">{crmAction.faelligkeit}</dd>
+          <div className="flex justify-between border-b border-border-subtle py-2">
+            <dt className="text-ink-faint">Fälligkeit</dt>
+            <dd className="font-medium text-ink-muted">{crmAction.faelligkeit}</dd>
           </div>
-          <div className="flex justify-between border-b border-zinc-800 py-2">
-            <dt className="text-zinc-500">Kunde</dt>
-            <dd className="font-medium text-zinc-200">Thomas Berger</dd>
+          <div className="flex justify-between border-b border-border-subtle py-2">
+            <dt className="text-ink-faint">Kunde</dt>
+            <dd className="font-medium text-ink-muted">Thomas Berger</dd>
           </div>
           <div className="flex justify-between py-2">
-            <dt className="text-zinc-500">Status</dt>
-            <dd className={`font-medium ${isError ? "text-rose-700" : liveBadge ? "text-emerald-700" : "text-zinc-300"}`}>
+            <dt className="text-ink-faint">Status</dt>
+            <dd className={`font-medium ${isError ? "text-danger" : liveBadge ? "text-sage" : "text-ink-muted"}`}>
               {statusText}
             </dd>
           </div>

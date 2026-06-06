@@ -47,7 +47,7 @@ export function ProtokollFieldRow({ label, field, meetings }: ProtokollFieldRowP
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
-            className="text-xs text-beleg underline-offset-2 hover:underline"
+            className="interactive-focus text-xs text-beleg underline-offset-2 hover:underline"
           >
             {expanded ? "Weniger" : "Mehr anzeigen"}
           </button>
