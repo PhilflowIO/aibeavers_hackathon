@@ -51,6 +51,56 @@ rebuild always reflects the current public data.
 - **Surface:** FastMCP — stdio locally, streamable-HTTP in Docker.
 - **Deploy:** `docker compose up` (qdrant + app), fully self-contained.
 
+## Run it
+
+### Docker (self-contained — the intended path)
+
+```bash
+cp docker/.env.example .env          # set DEEPINFRA_TOKEN=...
+docker compose -f docker/docker-compose.yml up -d qdrant
+# one-shot ingest: fetch/clean -> dense (DeepInfra) + German sparse -> Qdrant + DuckDB
+docker compose -f docker/docker-compose.yml run --rm app foerder-ingest
+# serve the MCP tool over streamable-HTTP on :8000
+docker compose -f docker/docker-compose.yml up -d app
+```
+
+`docker compose up` brings up Qdrant + the app; the ingest pulls the data **live**
+(`fetch_data.sh`, nothing bundled) and fills ~2.5k programmes. `data/` is git-ignored.
+
+### Local dev (no Docker)
+
+```bash
+uv sync
+export DEEPINFRA_TOKEN=...            # required for embeddings
+uv run foerder-ingest                 # embedded Qdrant (FOERDER_QDRANT_URL unset) + DuckDB
+uv run foerder-mcp                    # MCP over stdio (default transport)
+uv run python -m eval.run_eval        # Hit@1/@3/@5 + MRR over the gold set
+uv run python -m eval.smoke           # 6 demo profiles -> top-5 titles
+```
+
+### MCP integration
+
+Two tools: `search_funding(query, filters?, semantic_weight=0.7, limit=20)` →
+ranked programmes, and `get_program(uuid)` → full record from DuckDB. Point any MCP
+client at the stdio entrypoint (`foerder-mcp`) locally, or the streamable-HTTP endpoint
+(`http://localhost:8000`) in Docker.
+
+### Configure (env-overridable, see `foerder/config.py`)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DEEPINFRA_TOKEN` | — | embedding API key (required for ingest/query) |
+| `FOERDER_QDRANT_URL` | _(unset → embedded)_ | Qdrant server URL; `http://qdrant:6333` in Docker |
+| `FOERDER_EMBEDDING_PROVIDER` | `deepinfra` | swap the embedding backend (provider interface) |
+| `FOERDER_EMBEDDING_MODEL` | `Qwen/Qwen3-Embedding-0.6B` | dense model (1024-dim) |
+| `FOERDER_SEMANTIC_WEIGHT` | `0.7` | hybrid knob: `1.0` pure dense, `0.0` pure sparse |
+| `FOERDER_COLLECTION_NAME` | `foerderprogramme` | Qdrant collection |
+
+Switching the **embedding provider** (e.g. to a self-hosted TEI) is implementing the
+`EmbeddingProvider` protocol in `foerder/embedding.py` and routing it through
+`get_provider()`. Switching the **vector store** to embedded vs server is just
+`FOERDER_QDRANT_URL`.
+
 ## Build it
 
 Hand `BUILD_PROMPT.md` to a fresh agent session. It rebuilds everything from scratch
