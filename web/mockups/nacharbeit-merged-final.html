@@ -667,6 +667,7 @@
   var order = [];          // preserves arrival order for stable spine
   var liveReceived = false;
   var isFallback = false;
+  var runActive = false;
 
   /* ----- dedicated sr-only aria-live region for HITL outcomes (from C) ----- */
   var srRegion = document.createElement("div");
@@ -905,6 +906,16 @@
     arr.forEach(upsert);
   }
 
+  /* ----- clear baked fallback rows before a live run/action stream takes over ----- */
+  function resetLiveRun(){
+    state = new Map();
+    order = [];
+    isFallback = false;
+    runActive = true;
+    fbNote.classList.remove("show");
+    listEl.classList.remove("fallback");
+  }
+
   /* =========================================================================
      HITL — POST decision; NO optimistic green or local decision truth.
      grant -> after /approve success, mark approval='granted' ONLY (status
@@ -1014,7 +1025,7 @@
 
   /* =========================================================================
      ~1.5s FALLBACK — five baked demo actions, shown only if no SSE arrives.
-     Any live event overrides it (liveReceived gate).
+     Any live run_start or first live action overrides it by clearing baked rows.
      ========================================================================= */
   var FALLBACK = [
     { action_id:"a1", tool:"lookup_foerderung", real:false, status:"stub_preview", approval:null,
@@ -1048,11 +1059,15 @@
      action/run_start/run_end/answer/error. Named snapshot/action events are
      also accepted for future mockup experiments, but are not required.
      ========================================================================= */
-  function markLive(){
+  function markLive(resetFallback){
     if(!liveReceived){
       liveReceived = true;
-      isFallback = false;
       clearTimeout(fallbackTimer);
+    }
+    if(resetFallback && (isFallback || !runActive)){
+      resetLiveRun();
+    } else {
+      isFallback = false;
       fbNote.classList.remove("show");
       listEl.classList.remove("fallback");
     }
@@ -1072,15 +1087,20 @@
         try{
           var msg = JSON.parse(ev.data);
           if(!msg || !msg.kind) return;
-          markLive();
           if(msg.kind === "action" && msg.action){
+            markLive(isFallback);
             upsert(msg.action);
             render();
           } else if(msg.kind === "run_start"){
+            markLive(true);
+            render();
             connText.textContent = "Live läuft";
           } else if(msg.kind === "run_end"){
+            markLive(false);
+            runActive = false;
             connText.textContent = "Live abgeschlossen";
           } else if(msg.kind === "error"){
+            markLive(false);
             runHint.classList.add("show");
             runHint.textContent = "Live-Fehler: " + (msg.message || "unbekannt");
           }
@@ -1090,7 +1110,7 @@
       es.addEventListener("snapshot", function(ev){
         try{
           var arr = JSON.parse(ev.data);
-          markLive();                 // any live event overrides fallback
+          markLive(true);             // snapshot replaces fallback/live list
           hydrate(arr);               // wholesale re-hydrate (also recovers post-drop)
           render(awaitingId());       // focus the awaiting decision after re-hydrate
         }catch(e){}
@@ -1099,7 +1119,7 @@
       es.addEventListener("action", function(ev){
         try{
           var a = JSON.parse(ev.data);
-          markLive();
+          markLive(isFallback);
           upsert(a);                  // upsert by action_id
           render();
         }catch(e){}
@@ -1157,8 +1177,8 @@
        element.disabled AND [disabled] (pointer-events:none + opacity).
    [x] "Nacharbeit starten" -> POST /run; 404/failure -> inline #runHint, no fake.
    [x] Five demo actions baked as preview-only FALLBACK (real:false), shown only
-       if no SSE within ~1.5s, dimmed (.timeline.fallback) + fallback-note; any
-       live event overrides.
+       if no SSE within ~1.5s, dimmed (.timeline.fallback) + fallback-note;
+       run_start or the first live action clears baked rows before live rendering.
    [x] a11y: :focus-visible rings; aria-live timeline + dedicated sr-only
        announce() region for grant/deny; document-scoped Enter=Freigeben /
        Esc=Ablehnen on the single awaiting node (INPUT/TEXTAREA/BUTTON/A guard);
