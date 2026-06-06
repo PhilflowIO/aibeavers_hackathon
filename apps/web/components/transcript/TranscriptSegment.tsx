@@ -27,9 +27,9 @@ export function TranscriptSegment({
 
   const speakerClass =
     segment.speaker === "Berater"
-      ? "text-emerald-400"
+      ? "text-emerald-700"
       : segment.speaker === "Kunde"
-        ? "text-violet-400"
+        ? "text-violet-700"
         : "text-zinc-300";
 
   return (
@@ -37,10 +37,10 @@ export function TranscriptSegment({
       id={`segment-${meeting_id}-${index}`}
       ref={(node) => registerSegmentRef(meeting_id, index, node)}
       className={[
-        "rounded-lg border px-3 py-2.5 transition-colors duration-300",
+        "border-b px-1 py-2.5 transition-colors duration-300 last:border-0",
         highlighted
-          ? "border-sky-400/70 bg-sky-500/15 ring-2 ring-sky-400/40 animate-pulse"
-          : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700",
+          ? "rounded-md border-sky-300 bg-sky-50 px-3 ring-2 ring-sky-200 animate-pulse"
+          : "border-zinc-800 hover:bg-zinc-900/70",
       ].join(" ")}
     >
       <header className="mb-1 flex items-baseline gap-2 text-xs">

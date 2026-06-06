@@ -34,9 +34,9 @@ export function KalenderPanel({ actions, execution }: KalenderPanelProps) {
       ? "Einladung konnte nicht versendet werden"
       : "Kalendereintrag + Einladung wird vorbereitet";
   const panelTone = isDone
-    ? "border-sky-500/30 bg-sky-500/5"
+    ? "border-sky-300 bg-sky-50"
     : isError
-      ? "border-rose-500/30 bg-rose-500/5"
+      ? "border-rose-300 bg-rose-50"
       : "border-zinc-700 bg-zinc-900/60";
 
   return (
@@ -64,7 +64,7 @@ export function KalenderPanel({ actions, execution }: KalenderPanelProps) {
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-sky-400">Agenda</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-sky-800">Agenda</p>
           <ul className="mt-2 space-y-2">
             {DEFAULT_AGENDA.map((item, i) => (
               <li

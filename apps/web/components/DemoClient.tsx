@@ -25,7 +25,7 @@ export function DemoClient() {
 
   if (loadError) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-950 p-6 text-red-400">
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 p-6 text-red-800">
         {loadError}
       </main>
     );

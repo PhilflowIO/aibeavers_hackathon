@@ -59,7 +59,7 @@ Freundliche Grüße
 Ihr Beratungsteam`}
         </pre>
 
-        <div className={`border-t border-zinc-800 px-4 py-2 text-xs ${isDone ? "text-emerald-500/90" : isError ? "text-rose-300" : "text-zinc-400"}`}>
+        <div className={`border-t border-zinc-800 px-4 py-2 text-xs ${isDone ? "text-emerald-700" : isError ? "text-rose-700" : "text-zinc-400"}`}>
           {footer}
         </div>
       </div>

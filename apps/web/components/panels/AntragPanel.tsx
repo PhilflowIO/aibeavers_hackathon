@@ -56,9 +56,9 @@ function FieldRow({
         <span
           className={
             pending
-              ? "text-amber-400"
+              ? "text-amber-800"
               : highlight
-                ? "font-semibold text-sky-300"
+                ? "font-semibold text-sky-800"
                 : prefilled
                   ? "text-zinc-200"
                   : "text-zinc-400"
