@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.git
+.playwright-mcp
+ui-readability-*.png
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+Fördermittel
+.claude
+.specify
