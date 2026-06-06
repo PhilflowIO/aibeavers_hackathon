@@ -38,6 +38,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["foerder"]
+# Plain path-based editable: add project root to sys.path via a simple .pth
+# instead of hatchling's custom finder, which fails to resolve submodules
+# when the project path is non-ASCII (Fördermittel).
+dev-mode-dirs = ["."]
 
 [tool.ruff]
 line-length = 100
@@ -50,3 +54,8 @@ select = ["E", "F", "I", "UP", "B", "W"]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["snowballstemmer.*", "stop_words.*"]
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
