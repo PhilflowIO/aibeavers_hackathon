@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { runAgent } from "./agent.js";
 import { extractActions, type ExtractedActions } from "./extract.js";
 import { closePipedriveClient } from "./tools/pipedrive.js";
+import { closeFoerderClient } from "./tools/foerder.js";
 
 /**
  * CLI-Einstieg.
@@ -22,19 +23,26 @@ import { closePipedriveClient } from "./tools/pipedrive.js";
  */
 
 /** Zieht `--transcript <pfad>` aus argv und gibt {transcriptPath, rest} zurück. */
-function parseArgs(argv: string[]): { transcriptPath: string | null; rest: string } {
+function parseArgs(argv: string[]): {
+  transcriptPath: string | null;
+  rest: string;
+  dryRun: boolean;
+} {
   const out: string[] = [];
   let transcriptPath: string | null = null;
+  let dryRun = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--transcript" || a === "-t") {
       transcriptPath = argv[++i] ?? null;
       if (!transcriptPath) throw new Error("--transcript erwartet einen Dateipfad.");
+    } else if (a === "--dry-run" || a === "--plan") {
+      dryRun = true;
     } else {
       out.push(a);
     }
   }
-  return { transcriptPath, rest: out.join(" ").trim() };
+  return { transcriptPath, rest: out.join(" ").trim(), dryRun };
 }
 
 /** Eine Zeile pro gesetztem Feld; null/leer wird übersprungen. */
@@ -144,6 +152,26 @@ function buildBriefing(x: ExtractedActions): string {
     }
   }
 
+  // AUFGABE 5 — Passende Förderprogramme recherchieren (Funding → CRM).
+  if (x.foerderung?.relevant) {
+    const fo = x.foerderung;
+    const detail = [
+      field("Vorhaben", fo.vorhaben),
+      field("Region/Bundesland", fo.bundesland),
+      field("Objekt", fo.objekt),
+      field("Rolle", fo.rolle),
+    ].filter(Boolean);
+    parts.push(
+      "\nAUFGABE 5 — Passende Förderprogramme recherchieren:\n" +
+        (detail.length ? detail.join("\n") + "\n" : "") +
+        "→ Rufe search_funding auf (funding_location = Bundesland UND \"bundesweit\", " +
+        "z.B. [\"Bayern\", \"bundesweit\"] — sonst fehlen die Bundesprogramme wie BEG/KfW/BAFA), " +
+        "prüfe die aussichtsreichsten Treffer mit get_program, und gib eine kurze " +
+        "Förder-Shortlist (Titel, knappe Begründung, Link). Nenne Konditionen nur aus dem " +
+        "Datensatz. Wenn ein CRM-Deal existiert, halte die Shortlist als Pipedrive-Notiz fest."
+    );
+  }
+
   parts.push(
     "\nFühre die Aufgaben in dieser Reihenfolge aus und berichte am Ende knapp, " +
       "was erledigt wurde und welche Lücken offen sind."
@@ -158,7 +186,7 @@ async function once(prompt: string) {
   console.log(`🤖  ${answer}\n`);
 }
 
-async function fromTranscript(path: string, extra: string) {
+async function fromTranscript(path: string, extra: string, dryRun: boolean) {
   const raw = await readFile(path, "utf8");
   const transcript = JSON.parse(raw) as object;
 
@@ -168,6 +196,12 @@ async function fromTranscript(path: string, extra: string) {
 
   let briefing = buildBriefing(extracted);
   if (extra) briefing += `\n\nZusätzliche Anweisung des Beraters: ${extra}`;
+
+  if (dryRun) {
+    // Dry-Run: Plan zeigen, KEINE realen Seiteneffekte (Mail/Termin/CRM).
+    console.log("📋  Briefing (Dry-Run — keine Aktionen ausgeführt):\n" + briefing + "\n");
+    return;
+  }
 
   await once(briefing);
 }
@@ -192,8 +226,8 @@ async function repl() {
 }
 
 async function main() {
-  const { transcriptPath, rest } = parseArgs(process.argv.slice(2));
-  if (transcriptPath) return fromTranscript(transcriptPath, rest);
+  const { transcriptPath, rest, dryRun } = parseArgs(process.argv.slice(2));
+  if (transcriptPath) return fromTranscript(transcriptPath, rest, dryRun);
   if (rest) return once(rest);
   return repl();
 }
@@ -203,4 +237,7 @@ main()
     console.error("Fehler:", (err as Error).message);
     process.exit(1);
   })
-  .finally(() => closePipedriveClient());
+  .finally(async () => {
+    await closePipedriveClient();
+    await closeFoerderClient();
+  });
