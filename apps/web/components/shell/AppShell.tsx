@@ -27,6 +27,7 @@ export function AppShell({ transcript }: AppShellProps) {
     qaResult,
     errorMessage,
     showMailToast,
+    heroExecution,
     crmExecution,
     startAnalysis,
     advancePanel,
@@ -112,6 +113,7 @@ export function AppShell({ transcript }: AppShellProps) {
               errorMessage={errorMessage}
               meetings={transcript.meetings}
               crmExecution={crmExecution ?? undefined}
+              heroExecution={heroExecution ?? undefined}
               onRunQa={runQa}
               onRetry={reset}
             />

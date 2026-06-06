@@ -1,12 +1,13 @@
 "use client";
 
-import type { DemoAction, EmailEntwurfAction } from "../../lib/types";
+import type { ActionExecutionInfo, DemoAction, EmailEntwurfAction } from "../../lib/types";
 
 interface UnterlagenPanelProps {
   actions: DemoAction[];
+  execution?: ActionExecutionInfo;
 }
 
-export function UnterlagenPanel({ actions }: UnterlagenPanelProps) {
+export function UnterlagenPanel({ actions, execution }: UnterlagenPanelProps) {
   const email = actions.find((a): a is EmailEntwurfAction => a.typ === "email_entwurf");
 
   if (!email) {
@@ -16,12 +17,25 @@ export function UnterlagenPanel({ actions }: UnterlagenPanelProps) {
       </article>
     );
   }
+  const status = execution?.status ?? "pending";
+  const isDone = status === "success" || status === "mocked";
+  const isError = status === "error";
+  const helper = isDone
+    ? "Entwurf ausgeführt — bereit zum Versand"
+    : isError
+      ? "Entwurf konnte nicht ausgeführt werden"
+      : "Entwurf wird vorbereitet";
+  const footer = isDone
+    ? "✓ Entwurf vom Agent erstellt · Anhänge: Riester-Unterlagen.pdf"
+    : isError
+      ? "Fehler bei der Ausführung · Demo läuft weiter"
+      : "Entwurf in Arbeit · Anhänge werden vorbereitet";
 
   return (
     <article className="flex h-full flex-col">
       <header className="mb-4">
         <h2 className="text-lg font-semibold text-zinc-50">Unterlagen & E-Mail</h2>
-        <p className="mt-1 text-sm text-zinc-500">Entwurf ausgeführt — bereit zum Versand</p>
+        <p className="mt-1 text-sm text-zinc-500">{helper}</p>
       </header>
 
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/60">
@@ -45,8 +59,8 @@ Freundliche Grüße
 Ihr Beratungsteam`}
         </pre>
 
-        <div className="border-t border-zinc-800 px-4 py-2 text-xs text-emerald-500/90">
-          ✓ Entwurf vom Agent erstellt · Anhänge: Riester-Unterlagen.pdf
+        <div className={`border-t border-zinc-800 px-4 py-2 text-xs ${isDone ? "text-emerald-500/90" : isError ? "text-rose-300" : "text-zinc-400"}`}>
+          {footer}
         </div>
       </div>
     </article>

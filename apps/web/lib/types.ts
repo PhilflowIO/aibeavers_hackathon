@@ -44,3 +44,7 @@ export interface CrmExecutionInfo {
   externalId?: string;
   provider?: string;
 }
+
+export interface ActionExecutionInfo {
+  status: "pending" | "success" | "mocked" | "error";
+}

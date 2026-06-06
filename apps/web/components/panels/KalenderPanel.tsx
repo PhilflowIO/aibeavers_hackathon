@@ -1,9 +1,10 @@
 "use client";
 
-import type { DemoAction, KalenderAction } from "../../lib/types";
+import type { ActionExecutionInfo, DemoAction, KalenderAction } from "../../lib/types";
 
 interface KalenderPanelProps {
   actions: DemoAction[];
+  execution?: ActionExecutionInfo;
 }
 
 const DEFAULT_AGENDA = [
@@ -11,7 +12,7 @@ const DEFAULT_AGENDA = [
   "ESG / Nachhaltigkeitspräferenz nachholen (§34d)",
 ];
 
-export function KalenderPanel({ actions }: KalenderPanelProps) {
+export function KalenderPanel({ actions, execution }: KalenderPanelProps) {
   const kalender = actions.find((a): a is KalenderAction => a.typ === "kalender");
 
   if (!kalender) {
@@ -24,15 +25,28 @@ export function KalenderPanel({ actions }: KalenderPanelProps) {
 
   const start = resolveStart(kalender);
   const end = new Date(start.getTime() + (kalender.dauer_min ?? 60) * 60_000);
+  const status = execution?.status ?? "pending";
+  const isDone = status === "success" || status === "mocked";
+  const isError = status === "error";
+  const helper = isDone
+    ? "Kalendereintrag + Einladung versendet"
+    : isError
+      ? "Einladung konnte nicht versendet werden"
+      : "Kalendereintrag + Einladung wird vorbereitet";
+  const panelTone = isDone
+    ? "border-sky-500/30 bg-sky-500/5"
+    : isError
+      ? "border-rose-500/30 bg-rose-500/5"
+      : "border-zinc-700 bg-zinc-900/60";
 
   return (
     <article className="flex h-full flex-col">
       <header className="mb-4">
         <h2 className="text-lg font-semibold text-zinc-50">Folgetermin</h2>
-        <p className="mt-1 text-sm text-zinc-500">Kalendereintrag + Einladung versendet</p>
+        <p className="mt-1 text-sm text-zinc-500">{helper}</p>
       </header>
 
-      <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 p-5">
+      <div className={`rounded-xl border p-5 ${panelTone}`}>
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-sky-600 text-white">
             <span className="text-[10px] font-bold uppercase">

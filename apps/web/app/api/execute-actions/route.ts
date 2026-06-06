@@ -16,7 +16,47 @@ const requestSchema = z.object({
   kunde: z.string(),
   kunde_email: z.string().email().optional(),
   actions: z.array(actionSchema),
+  execution_token: z.string().optional(),
 });
+
+const DEMO_EXECUTION_TOKEN = "berger-demo-actions";
+const DEMO_KUNDE = "Thomas Berger";
+const DEMO_KUNDE_EMAIL = "thomas.berger@example.com";
+
+function isAllowedLiveDemoRequest(
+  kunde: string,
+  kundeEmail: string | undefined,
+  actions: Action[],
+  token: string | undefined,
+): boolean {
+  if (token !== DEMO_EXECUTION_TOKEN) return false;
+  if (kunde !== DEMO_KUNDE) return false;
+  if (kundeEmail !== DEMO_KUNDE_EMAIL) return false;
+  if (actions.length === 0 || actions.length > 2) return false;
+
+  return actions.every((action) => {
+    if (action.typ === "kalender") {
+      return (
+        action.titel === "Folgetermin Berger — Wohn-Riester + ESG nachholen" &&
+        action.start === "+7d" &&
+        (action.dauer_min ?? 60) === 60
+      );
+    }
+    if (action.typ === "email_entwurf") {
+      return (
+        action.betreff === "Unterlagen Riester-Rente + Terminbestätigung" &&
+        action.empfaenger === DEMO_KUNDE_EMAIL
+      );
+    }
+    if (action.typ === "crm_task") {
+      return (
+        action.titel === "Folgetermin Berger — Wohn-Riester + ESG nachholen" &&
+        action.faelligkeit === "+7d"
+      );
+    }
+    return false;
+  });
+}
 
 async function executeKalenderLive(
   action: Extract<Action, { typ: "kalender" }>,
@@ -131,10 +171,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { kunde, kunde_email, actions } = parsed.data;
+    const { kunde, kunde_email, actions, execution_token } = parsed.data;
     const results: ActionResult[] = [];
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
-    const liveActionsEnabled = allowLiveActionExecution();
+    const liveActionsEnabled =
+      allowLiveActionExecution() &&
+      isAllowedLiveDemoRequest(kunde, kunde_email, actions, execution_token);
 
     for (const action of actions) {
       if (!liveActionsEnabled || (useMockAnalysis() && action.typ !== "crm_task")) {

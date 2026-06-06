@@ -9,6 +9,7 @@ import {
 import { MOCK_QA } from "./mock-demo-data";
 import type {
   AnalyseResult,
+  ActionExecutionInfo,
   CrmExecutionInfo,
   PlanStep,
   QaResult,
@@ -64,6 +65,7 @@ export interface DemoStateContext {
   qaResult: QaResult | null;
   errorMessage: string | null;
   showMailToast: boolean;
+  heroExecution: ActionExecutionInfo | null;
   startAnalysis: () => void;
   advancePanel: () => void;
   runQa: (frage: string) => void;
@@ -96,6 +98,8 @@ export function useDemoState(
   const [crmExecution, setCrmExecution] = useState<CrmExecutionInfo | null>(
     null,
   );
+  const [heroExecution, setHeroExecution] =
+    useState<ActionExecutionInfo | null>(null);
   const qaAutoRanRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -198,6 +202,7 @@ export function useDemoState(
     setCrmExecuted(false);
     setHeroExecuted(false);
     setCrmExecution(null);
+    setHeroExecution(null);
     qaAutoRanRef.current = false;
   }, [clearTimers]);
 
@@ -240,18 +245,24 @@ export function useDemoState(
     if (heroActions.length === 0) return;
 
     setHeroExecuted(true);
+    setHeroExecution({ status: "pending" });
     void executeActions({
       kunde: transcript.kunde,
-      kunde_email: "berger@example.de",
+      kunde_email: "thomas.berger@example.com",
       actions: heroActions,
+      execution_token: "berger-demo-actions",
     })
       .then((response) => {
         const ok = response.results.every(
           (result) => result.status === "success" || result.status === "mocked",
         );
+        setHeroExecution({ status: ok ? "success" : "error" });
         setShowMailToast(ok);
       })
-      .catch(() => setShowMailToast(false));
+      .catch(() => {
+        setHeroExecution({ status: "error" });
+        setShowMailToast(false);
+      });
   }, [state, analysis, heroExecuted, transcript.kunde]);
 
   // Auto mode: run default Q&A when qa_ready is reached
@@ -291,6 +302,7 @@ export function useDemoState(
     qaResult,
     errorMessage,
     showMailToast,
+    heroExecution,
     startAnalysis,
     advancePanel,
     runQa,
