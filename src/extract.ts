@@ -72,9 +72,30 @@ const crmUpdateSchema = z
   .transform((v) => v ?? null)
   .describe("Strukturierter CRM-Eintrag aus dem Gespräch.");
 
+const foerderungSchema = z
+  .object({
+    relevant: z
+      .boolean()
+      .nullish()
+      .transform((v) => v ?? false)
+      .describe("true, wenn der Kunde irgendein förderfähiges Vorhaben erwähnt"),
+    vorhaben: nstr().describe(
+      'z.B. "Hauskauf", "Dachdämmung + Wärmepumpe", "Existenzgründung"'
+    ),
+    bundesland: nstr().describe("Bundesland des Vorhabens, falls genannt"),
+    objekt: nstr().describe('"Bestand" | "Neubau" | null'),
+    rolle: nstr().describe('z.B. "privater Eigentümer", "Unternehmen"'),
+  })
+  .nullish()
+  .transform((v) => v ?? null)
+  .describe(
+    "Förderfähiges Vorhaben des Kunden. null, wenn nichts Förderbares angezeigt ist."
+  );
+
 export const extractedActionsSchema = z.object({
   folgetermin: folgeterminSchema,
   crm_update: crmUpdateSchema,
+  foerderung: foerderungSchema,
   unterlagen: strArray().describe(
     "Fehlende/zugesagte Unterlagen, die per Mail anzufordern/zu senden sind"
   ),
@@ -121,6 +142,18 @@ Folgetermin:
     Markiere im title, dass es ein Terminvorschlag ist.
   • Ist gar kein Folgetermin angezeigt, ist folgetermin = null.
 
+Förderung:
+  • Erkenne JEDES förderfähige Vorhaben des Kunden — auch wenn es nur beiläufig
+    erwähnt wird (z.B. ein in N Jahren geplanter Hauskauf). Typische förderfähige
+    Vorhaben: Immobilien-/Hauskauf, Neubau, energetische Sanierung, Dämmung
+    (Dach/Fassade), Heizungstausch/Wärmepumpe, Photovoltaik, Existenzgründung,
+    Unternehmensinvestition.
+  • Ist ein solches Vorhaben angezeigt, setze foerderung.relevant=true und fülle
+    vorhaben/bundesland/objekt/rolle, soweit das Transkript es hergibt (sonst null).
+    objekt ist "Bestand" (Bestandsimmobilie) oder "Neubau" oder null.
+  • Ist gar kein förderfähiges Vorhaben erkennbar, setze foerderung.relevant=false
+    und alle übrigen Felder auf null. Erfinde NICHTS dazu.
+
 Ausgabe-Disziplin:
   • Gib JEDES Feld des Schemas an. Lasse kein Feld weg — fehlt eine Information,
     setze ausdrücklich null (bzw. eine leere Liste []).
@@ -150,6 +183,13 @@ Erklärung, kein Markdown-Codeblock):
     "esg_praeferenz": string|null,
     "naechstes_produkt": string|null,
     "hauskauf_in_jahren": number|null
+  } | null,
+  "foerderung": {
+    "relevant": boolean,
+    "vorhaben": string|null,
+    "bundesland": string|null,
+    "objekt": string|null,
+    "rolle": string|null
   } | null,
   "unterlagen": string[],
   "compliance_gaps": string[]

@@ -3,6 +3,7 @@ import { HumanMessage } from "@langchain/core/messages";
 import { createLlm } from "./llm.js";
 import { allTools } from "./tools/index.js";
 import { loadPipedriveTools } from "./tools/pipedrive.js";
+import { loadFoerderTools } from "./tools/foerder.js";
 
 export const SYSTEM_PROMPT = `Du bist der Nacharbeits-Agent eines selbstständigen Finanzberaters.
 
@@ -12,6 +13,8 @@ du fasst nicht nur zusammen, du HANDELST. Konkret kannst du:
     (find_free_slot) und Termine anlegen (create_calendar_event)
   • E-Mails senden (send_email), auflisten (list_emails) und lesen (read_email)
   • CRM-Deals in Pipedrive finden, Notizen anlegen und Felder aktualisieren
+  • Passende staatliche Förderprogramme zum Vorhaben des Kunden recherchieren
+    (search_funding) und deren Konditionen prüfen (get_program)
 
 Arbeitsweise:
   1. Plane die nötigen Schritte explizit, bevor du Tools aufrufst.
@@ -23,14 +26,21 @@ Arbeitsweise:
      bei send_email im Feld icalEvent als echte Einladung an.
   4. Für CRM-Aktionen: suche zuerst den Deal (search oder list), dann handle. Schreibe
      Notizen immer auf Deutsch und im Kontext des Beratungsgesprächs.
-  5. Erfinde NIEMALS Termine, Adressen oder Inhalte. Fehlt eine Information, frage nach
+  5. Für Förderprogramme: setze funding_location IMMER als Bundesland UND "bundesweit"
+     zusammen (z.B. ["Bayern", "bundesweit"]) — sonst fehlen die Bundesprogramme
+     (BEG, KfW, BAFA). Recherchiere mit search_funding, prüfe die aussichtsreichsten
+     Treffer mit get_program. Nenne Fördersätze, Beträge, Einkommensgrenzen und Fristen
+     NUR, wenn sie im get_program-Datensatz stehen — niemals aus deinem Allgemeinwissen.
+     Steht eine Zahl nicht im Datensatz, verweise auf den Link statt sie zu erfinden.
+  6. Erfinde NIEMALS Termine, Adressen oder Inhalte. Fehlt eine Information, frage nach
      oder benenne die Lücke klar.
-  6. Antworte knapp auf Deutsch und berichte am Ende, welche Aktionen du ausgeführt hast.`;
+  7. Antworte knapp auf Deutsch und berichte am Ende, welche Aktionen du ausgeführt hast.`;
 
 /** The full production toolset: local tools + the dynamically-loaded Pipedrive CRM tools. */
 export async function buildToolset(): Promise<unknown[]> {
   const pipedriveTools = await loadPipedriveTools();
-  return [...allTools, ...pipedriveTools];
+  const foerderTools = await loadFoerderTools();
+  return [...allTools, ...pipedriveTools, ...foerderTools];
 }
 
 /**
