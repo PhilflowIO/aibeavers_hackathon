@@ -136,7 +136,7 @@ export async function POST(request: Request) {
     const plan_steps: ExecuteActionsResponse["plan_steps"] = [];
 
     for (const action of actions) {
-      if (useMockAnalysis()) {
+      if (useMockAnalysis() && action.typ !== "crm_task") {
         const result = mockSuccessResult(action);
         results.push(result);
         plan_steps.push(planStepForAction(action, true));

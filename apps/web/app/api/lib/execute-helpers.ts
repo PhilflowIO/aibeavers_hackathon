@@ -74,11 +74,12 @@ export function mockSuccessResult(action: Action): ActionResult {
     case "crm_task":
       return {
         typ: "crm_task",
-        status: "success",
-        message: `CRM-Aufgabe „${action.titel}" (Mock) erstellt.`,
+        status: "mocked",
+        message: `CRM-Aufgabe „${action.titel}" (Mock) geplant.`,
         panel_data: {
           titel: action.titel,
           faelligkeit: parseFaelligkeit(action.faelligkeit),
+          provider: "mock",
         },
       };
     case "email_entwurf":

@@ -1,11 +1,21 @@
 import { parseFaelligkeit } from "./parse-faelligkeit";
 import type { CrmContext, CrmExecutionResult, CrmProvider, CrmTaskAction } from "./types";
 
+function normalizeCompanyDomain(companyDomain: string): string {
+  return companyDomain
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/.*$/, "")
+    .replace(/\.pipedrive\.com$/i, "");
+}
+
 export function createPipedriveProvider(
   token: string,
   companyDomain: string,
 ): CrmProvider {
-  const base = `https://${companyDomain}.pipedrive.com/api/v1`;
+  const domain = normalizeCompanyDomain(companyDomain);
+  const base = `https://${domain}.pipedrive.com/api/v1`;
+  const auth = new URLSearchParams({ api_token: token });
 
   return {
     name: "pipedrive",
@@ -16,7 +26,7 @@ export function createPipedriveProvider(
     ): Promise<CrmExecutionResult> {
       const due = parseFaelligkeit(action.faelligkeit);
 
-      const response = await fetch(`${base}/activities?api_token=${token}`, {
+      const response = await fetch(`${base}/activities?${auth.toString()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
