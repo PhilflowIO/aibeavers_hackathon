@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🦫 Nacharbeits-Agent</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel2: #1c2230; --border: #2a3240;
+    --text: #e6edf3; --muted: #8b949e; --accent: #d9a441; --green: #3fb950;
+    --red: #f85149; --blue: #58a6ff; --grey: #6e7681;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { padding: 18px 28px; border-bottom: 1px solid var(--border);
+           display: flex; align-items: baseline; gap: 14px; }
+  header h1 { font-size: 20px; margin: 0; }
+  header .tag { color: var(--muted); font-size: 13px; }
+  .bar { padding: 16px 28px; display: flex; gap: 10px; flex-wrap: wrap;
+         border-bottom: 1px solid var(--border); align-items: center; }
+  #q { flex: 1; min-width: 320px; background: var(--panel2); border: 1px solid var(--border);
+       color: var(--text); border-radius: 8px; padding: 11px 13px; font-size: 14px; }
+  button { background: var(--accent); color: #1a1205; border: 0; border-radius: 8px;
+           padding: 11px 16px; font-weight: 600; cursor: pointer; font-size: 14px; }
+  button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+                 font-weight: 500; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 24px 28px; }
+  .col h2 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+            color: var(--muted); margin: 0 0 14px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+          padding: 14px 16px; margin-bottom: 12px; display: flex; gap: 13px; align-items: flex-start;
+          animation: pop .25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+  .ico { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid;
+         place-items: center; font-size: 14px; border: 1px solid var(--border); }
+  .ico.executing { border-color: var(--blue); color: var(--blue); }
+  .ico.done { background: rgba(63,185,80,.15); border-color: var(--green); color: var(--green); }
+  .ico.error, .ico.denied { background: rgba(248,81,73,.15); border-color: var(--red); color: var(--red); }
+  .ico.awaiting_approval { border-color: var(--accent); color: var(--accent); }
+  .ico.stub_preview { color: var(--grey); }
+  .card.await { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .gate { display: none; gap: 8px; margin-top: 10px; }
+  .gate button { padding: 7px 14px; font-size: 13px; border-radius: 7px; }
+  .gate .deny { background: var(--panel2); color: var(--red); border: 1px solid var(--red); }
+  .toggle { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px;
+            user-select: none; cursor: pointer; }
+  .spin { width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent;
+          border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .body { flex: 1; min-width: 0; }
+  .row1 { display: flex; align-items: center; gap: 8px; }
+  .tool { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted);
+          background: var(--panel2); padding: 1px 7px; border-radius: 5px; }
+  .pill { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px;
+          border-radius: 20px; }
+  .pill.real { background: rgba(63,185,80,.15); color: var(--green); }
+  .pill.preview { background: rgba(110,118,129,.2); color: var(--muted); }
+  .summary { margin-top: 4px; }
+  .detail { margin-top: 8px; font-family: ui-monospace, monospace; font-size: 11.5px;
+            color: var(--muted); white-space: pre-wrap; max-height: 130px; overflow: auto;
+            background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+            padding: 8px 10px; display: none; }
+  .detail.show { display: block; }
+  .answer { background: linear-gradient(180deg, var(--panel2), var(--panel));
+            border: 1px solid var(--accent); border-radius: 10px; padding: 16px 18px;
+            white-space: pre-wrap; }
+  .empty { color: var(--grey); font-size: 14px; padding: 8px 2px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--grey);
+         margin-right: 7px; }
+  .dot.live { background: var(--green); box-shadow: 0 0 0 3px rgba(63,185,80,.2); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🦫 Nacharbeits-Agent</h1>
+    <span class="tag">Der Finanzberater closed im Gespräch. Die Nacharbeit erledigt der Agent.</span>
+    <span style="margin-left:auto" class="tag"><span class="dot" id="livedot"></span><span id="status">bereit</span></span>
+  </header>
+
+  <div class="bar">
+    <input id="q" placeholder="Anweisung an den Agenten…" />
+    <button id="run">Ausführen</button>
+    <label class="toggle" title="Human-in-the-loop: vor echten Aktionen nachfragen">
+      <input type="checkbox" id="hitl" checked /> HITL-Freigabe
+    </label>
+    <button class="ghost" data-demo="Lies meine letzten 3 E-Mails und fasse sie kurz zusammen.">Demo: Posteingang</button>
+    <button class="ghost" data-demo="Lege am 12.06.2026 um 10:00 einen 45-minütigen Folgetermin „Riester-Nachberatung" an und schicke die Kalender-Einladung an aibeavers@philflow.io.">Demo: Folgetermin + Einladung</button>
+  </div>
+
+  <main>
+    <div class="col">
+      <h2>Plan — ausgeführte Aktionen</h2>
+      <div id="actions"><div class="empty">Noch keine Aktion. Starte den Agenten oben.</div></div>
+    </div>
+    <div class="col">
+      <h2>Antwort des Agenten</h2>
+      <div id="answer" class="empty">—</div>
+    </div>
+  </main>
+
+<script>
+  const actionsEl = document.getElementById("actions");
+  const answerEl = document.getElementById("answer");
+  const statusEl = document.getElementById("status");
+  const liveDot = document.getElementById("livedot");
+  const qEl = document.getElementById("q");
+  const runBtn = document.getElementById("run");
+  const cards = new Map();
+  let firstAction = true;
+
+  function setStatus(s, live) {
+    statusEl.textContent = s;
+    liveDot.classList.toggle("live", !!live);
+  }
+
+  function icon(status) {
+    if (status === "executing") return '<span class="spin"></span>';
+    if (status === "done") return "✓";
+    if (status === "error" || status === "denied") return "✗";
+    if (status === "awaiting_approval") return "?";
+    return "◐";
+  }
+
+  function approve(id, decision) {
+    fetch("/approve", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, decision }),
+    });
+  }
+
+  function upsert(a) {
+    if (firstAction) { actionsEl.innerHTML = ""; firstAction = false; }
+    let card = cards.get(a.id);
+    if (!card) {
+      card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="ico"></div><div class="body">' +
+        '<div class="row1"><span class="tool"></span><span class="pill"></span></div>' +
+        '<div class="summary"></div><div class="gate"></div><div class="detail"></div></div>';
+      card.querySelector(".detail").addEventListener("click", () =>
+        card.querySelector(".detail").classList.toggle("show"));
+      actionsEl.appendChild(card);
+      cards.set(a.id, card);
+    }
+    card.querySelector(".ico").className = "ico " + a.status;
+    card.querySelector(".ico").innerHTML = icon(a.status);
+    card.querySelector(".tool").textContent = a.tool;
+    const pill = card.querySelector(".pill");
+    pill.textContent = a.real ? "ECHT" : "VORSCHAU";
+    pill.className = "pill " + (a.real ? "real" : "preview");
+    card.querySelector(".summary").textContent = a.summary;
+    const det = card.querySelector(".detail");
+    if (a.detail) { det.textContent = a.detail; }
+
+    const gate = card.querySelector(".gate");
+    if (a.status === "awaiting_approval") {
+      card.classList.add("await");
+      gate.style.display = "flex";
+      gate.innerHTML =
+        '<button class="appr">✓ Genehmigen</button><button class="deny">✗ Ablehnen</button>';
+      gate.querySelector(".appr").onclick = () => { approve(a.id, "granted"); gate.style.display = "none"; };
+      gate.querySelector(".deny").onclick = () => { approve(a.id, "denied"); gate.style.display = "none"; };
+    } else {
+      card.classList.remove("await");
+      gate.style.display = "none";
+      gate.innerHTML = "";
+    }
+  }
+
+  const es = new EventSource("/events");
+  es.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.kind === "run_start") {
+      cards.clear(); firstAction = true;
+      actionsEl.innerHTML = '<div class="empty">Agent plant…</div>';
+      answerEl.className = "empty"; answerEl.textContent = "…";
+      setStatus("läuft", true); runBtn.disabled = true;
+    } else if (m.kind === "action") {
+      upsert(m.action);
+    } else if (m.kind === "answer") {
+      answerEl.className = "answer"; answerEl.textContent = m.text || "(keine Textantwort)";
+    } else if (m.kind === "error") {
+      answerEl.className = "answer"; answerEl.style.borderColor = "var(--red)";
+      answerEl.textContent = "Fehler: " + m.message;
+    } else if (m.kind === "run_end") {
+      setStatus("fertig", false); runBtn.disabled = false;
+    }
+  };
+  es.onerror = () => setStatus("Verbindung getrennt", false);
+
+  async function run(instruction) {
+    if (!instruction) return;
+    await fetch("/run", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ instruction, hitl: document.getElementById("hitl").checked }),
+    });
+  }
+  runBtn.onclick = () => run(qEl.value.trim());
+  qEl.addEventListener("keydown", (e) => { if (e.key === "Enter") run(qEl.value.trim()); });
+  document.querySelectorAll("[data-demo]").forEach((b) =>
+    b.addEventListener("click", () => { qEl.value = b.dataset.demo; run(b.dataset.demo); }));
+</script>
+</body>
+</html>
