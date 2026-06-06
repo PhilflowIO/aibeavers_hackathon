@@ -11,6 +11,18 @@ import { loadSmtpConfig, loadImapConfig } from "../config.js";
 
 let _transport: nodemailer.Transporter | null = null;
 
+/**
+ * Stellt sicher, dass ein iCalendar-String eine `METHOD:REQUEST`-Zeile trägt
+ * (iMIP-Body-Pflicht, muss zum MIME-`method=REQUEST` passen). Ist bereits ein
+ * METHOD vorhanden, bleibt der String unverändert. Eingefügt direkt nach der
+ * VERSION-Zeile — der konventionellen Position im VCALENDAR-Header.
+ */
+export function withMethodRequest(ics: string): string {
+  if (/^METHOD:/im.test(ics)) return ics;
+  const eol = ics.includes("\r\n") ? "\r\n" : "\n";
+  return ics.replace(/^(VERSION:[^\r\n]*)/im, `$1${eol}METHOD:REQUEST`);
+}
+
 function getTransport() {
   if (_transport) return _transport;
   const cfg = loadSmtpConfig();
@@ -34,11 +46,14 @@ export const sendEmailTool = tool(
       subject,
       text: body,
       // Optionaler iCalendar-Anhang (z.B. Kalender-Einladung als .ics).
+      // Transport-Form (iMIP, RFC 6047): der Body MUSS ein METHOD tragen und
+      // muss zum MIME-Parameter `method=REQUEST` passen. create_calendar_event
+      // liefert die METHOD-lose Speicher-Form — hier injizieren wir REQUEST.
       ...(icalEvent
         ? {
             icalEvent: {
               method: "REQUEST",
-              content: icalEvent,
+              content: withMethodRequest(icalEvent),
               filename: "einladung.ics",
             },
           }
