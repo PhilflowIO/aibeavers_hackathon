@@ -76,6 +76,11 @@ pnpm agent                          # interaktive REPL
 pnpm dev                            # tsx watch
 ```
 
+## Deployment
+
+- **Server:** `178.105.86.72` (root). SSH-Alias: `ssh ai-beavers`
+  (Config in `~/.ssh/config`, Key `~/.ssh/ai-beavers`, `IdentitiesOnly yes`).
+
 ## Roadmap (nächste Schritte, NICHT Teil von Schritt 1)
 
 - CRM-Tool (Eintrag/Update als ausgeführter Akt).
