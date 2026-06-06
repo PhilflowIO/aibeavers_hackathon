@@ -3,6 +3,11 @@
 import tsdav, { type DAVCalendar } from "tsdav";
 const { createDAVClient } = tsdav;
 import { createEvent, type EventAttributes } from "ics";
+// ical.js: RFC-5545-konformes Parsing der vom Server gelieferten VEVENTs.
+// Ersetzt fragiles Regex (SUMMARY/DTSTART per Hand zerbricht an Line-Folding,
+// TZID, Escaping und mehreren VEVENTs pro Objekt). Eigene Implementierung —
+// dav-mcp dient nur als konzeptionelles Vorbild, nicht als Code-Quelle.
+import ICAL from "ical.js";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { loadCaldavConfig } from "../config.js";
@@ -111,6 +116,86 @@ function buildIcs(args: BuildIcsArgs): string {
 }
 
 /* ──────────────────────────────────────────────────────────────
+ * ICS-Parsing (RFC 5545 via ical.js)
+ * ────────────────────────────────────────────────────────────── */
+
+interface ParsedEvent {
+  summary: string;
+  start: Date | null;
+  end: Date | null;
+  allDay: boolean;
+  location: string;
+  description: string;
+  attendees: string[];
+  isRecurring: boolean;
+}
+
+/**
+ * Zerlegt einen rohen VCALENDAR-Block in strukturierte Termine. Liest ALLE
+ * enthaltenen VEVENTs (ein CalDAV-Objekt kann mehrere tragen, z.B. Ausnahmen
+ * einer Serie). Wirft bei kaputten Daten — der Aufrufer fängt das pro Objekt ab.
+ */
+export function parseEvents(icalData: string): ParsedEvent[] {
+  const comp = new ICAL.Component(ICAL.parse(icalData));
+  const vevents = comp.getAllSubcomponents("vevent");
+  return vevents.map((ve) => {
+    const ev = new ICAL.Event(ve);
+    const start = ev.startDate ?? null;
+    return {
+      summary: ev.summary || "(kein Titel)",
+      start: start ? start.toJSDate() : null,
+      end: ev.endDate ? ev.endDate.toJSDate() : null,
+      allDay: start ? start.isDate : false,
+      location: ev.location || "",
+      description: ev.description || "",
+      attendees: ve.getAllProperties("attendee").map((a) => {
+        const cn = a.getParameter("cn");
+        const name = typeof cn === "string" ? cn : "";
+        const addr = String(a.getFirstValue() ?? "").replace(/^mailto:/i, "");
+        return name ? `${name} <${addr}>` : addr;
+      }),
+      isRecurring: ev.isRecurring(),
+    };
+  });
+}
+
+const DATE_TIME_FMT = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Berlin",
+});
+
+const DATE_FMT = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Europe/Berlin",
+});
+
+/** Formatiert den Zeitraum eines Termins menschen-/LLM-lesbar (Europe/Berlin). */
+function formatRange(ev: ParsedEvent): string {
+  if (!ev.start) return "Zeit unbekannt";
+  if (ev.allDay) return `${DATE_FMT.format(ev.start)} (ganztägig)`;
+  const s = DATE_TIME_FMT.format(ev.start);
+  const e = ev.end ? DATE_TIME_FMT.format(ev.end) : "?";
+  return `${s} → ${e}`;
+}
+
+/** Ein Termin als mehrzeiliger Listeneintrag. */
+export function formatEvent(ev: ParsedEvent): string {
+  const parts = [`• ${ev.summary} | ${formatRange(ev)}`];
+  if (ev.location) parts.push(`    Ort: ${ev.location}`);
+  if (ev.attendees.length) parts.push(`    Teilnehmer: ${ev.attendees.join(", ")}`);
+  if (ev.isRecurring) parts.push(`    (wiederkehrend)`);
+  return parts.join("\n");
+}
+
+/* ──────────────────────────────────────────────────────────────
  * Tools
  * ────────────────────────────────────────────────────────────── */
 
@@ -127,16 +212,37 @@ export const listEventsTool = tool(
     });
     if (!objects.length) return "Keine Termine im angefragten Zeitraum.";
 
-    const lines = objects.map((o) => {
+    const events = objects.flatMap((o) => {
       const data = o.data ?? "";
-      const summary = /SUMMARY:(.*)/.exec(data)?.[1]?.trim() ?? "(kein Titel)";
-      const dtstart = /DTSTART[^:]*:(.*)/.exec(data)?.[1]?.trim() ?? "?";
-      const dtend = /DTEND[^:]*:(.*)/.exec(data)?.[1]?.trim() ?? "?";
-      return `• ${summary} | ${dtstart} → ${dtend}`;
+      try {
+        return parseEvents(data);
+      } catch {
+        // Kaputtes/unbekanntes Objekt nicht verschweigen, aber nicht erfinden.
+        return [
+          {
+            summary: "(Termin nicht lesbar)",
+            start: null,
+            end: null,
+            allDay: false,
+            location: "",
+            description: "",
+            attendees: [],
+            isRecurring: false,
+          } satisfies ParsedEvent,
+        ];
+      }
     });
-    return `Termine in "${
-      typeof calendar.displayName === "string" ? calendar.displayName : "Kalender"
-    }":\n` + lines.join("\n");
+
+    // Chronologisch sortieren; Termine ohne Startdatum ans Ende.
+    events.sort(
+      (a, b) => (a.start?.getTime() ?? Infinity) - (b.start?.getTime() ?? Infinity)
+    );
+
+    return (
+      `Termine in "${
+        typeof calendar.displayName === "string" ? calendar.displayName : "Kalender"
+      }":\n` + events.map(formatEvent).join("\n")
+    );
   },
   {
     name: "list_calendar_events",
