@@ -65,8 +65,10 @@
 
   HONESTY MODEL (SACRED — enforced in markup AND JS via resolveVisual()):
     green ✓ "echt"   -> ONLY real===true && status==="done"
-    real===false     -> amber "Vorschau · nächste Integration", terminal,
-                        NEVER a green check, never a spine "done" glow
+    status denied/error -> terminal warning states, never preview, never green
+    real===false     -> amber "Vorschau · nächste Integration" unless an
+                        explicit denied/error status exists; NEVER a green
+                        check, never a spine "done" glow
     Color is never the sole signal — every status pairs color + icon + text.
     lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
 
@@ -482,7 +484,7 @@
     font-weight:800; font-size:.92rem; display:flex; align-items:center; gap:9px;
   }
   .decision svg{ width:18px; height:18px; flex:0 0 auto; }
-  .decision.denied{ color:var(--warn); border-top-color:var(--warn-line); }
+  .decision.denied, .decision.error{ color:var(--warn); border-top-color:var(--warn-line); }
   .decision.granted{ color:var(--ok); }
 
   /* fallback dimming until live arrives */
@@ -711,12 +713,20 @@
 
   /* =========================================================================
      THE HONESTY GUARD — single source of truth for a node's rendered visual.
-     EARLY-RETURN (from C): real!==true is forced to terminal amber "Vorschau"
-     BEFORE any status branch is consulted. No caller can produce a green/done
-     visual for a non-real action; status==='done' without real===true never
-     reaches the 'done' branch. This makes the sacred invariant unbypassable.
+     Terminal denied/error statuses win first so backend failure/refusal events
+     are never mislabeled as generic preview. Then real!==true is forced to
+     terminal amber "Vorschau" BEFORE done/executing branches are consulted.
+     No caller can produce a green/done visual for a non-real action;
+     status==='done' without real===true never reaches the 'done' branch.
+     This makes the sacred invariant unbypassable.
      ========================================================================= */
   function resolveVisual(a){
+    if(a.status === "denied" || a.approval === "denied")
+      return { node:"stub", tag:"tag-warn", tagIcon:ic("cross"),
+               tagText:"abgelehnt", kind:"denied" };
+    if(a.status === "error")
+      return { node:"stub", tag:"tag-warn", tagIcon:ic("cross"),
+               tagText:"Fehler", kind:"error" };
     if(a.real !== true){
       // ANY non-real action -> terminal amber, regardless of status.
       return { node:"stub", tag:"tag-warn", tagIcon:ic("eye"),
@@ -731,9 +741,6 @@
     if(a.status === "awaiting_approval" && a.approval == null)
       return { node:"hitl flow", tag:"tag-wait", tagIcon:ic("clock"),
                tagText:"Freigabe nötig", kind:"hitl" };
-    if(a.approval === "denied")
-      return { node:"", tag:"tag-warn", tagIcon:ic("cross"),
-               tagText:"abgelehnt", kind:"denied" };
     // pending / unknown real action
     return { node:"", tag:"tag-wait", tagIcon:ic("clock"),
              tagText:"in Arbeit", kind:"pending" };
@@ -745,7 +752,7 @@
   function markerIconOf(kind, tool){
     if(kind === "done")   return ic("check");
     if(kind === "exec")   return ic("spinner");
-    if(kind === "denied") return ic("cross");
+    if(kind === "denied" || kind === "error") return ic("cross");
     return ic(TOOL_ICON[tool] || "chip");
   }
 
@@ -805,6 +812,8 @@
         '</div>';
     } else if(v.kind === "denied"){
       hitlHtml = '<div class="decision denied">'+ic("cross")+'Abgelehnt – keine Ausführung. Kein Schreibzugriff erfolgt.</div>';
+    } else if(v.kind === "error"){
+      hitlHtml = '<div class="decision error">'+ic("cross")+'Fehler – Ausführung nicht abgeschlossen. Bitte Detail prüfen.</div>';
     } else if(a.real === true && (v.kind === "exec" || v.kind === "pending") && a.approval === "granted" && a.status !== "done"){
       // granted but stream has not advanced to done -> pending line, NO green check.
       // HARDENED: gated on real===true AND v.kind (exec/pending) so a hostile/buggy
@@ -821,6 +830,7 @@
     if(v.kind === "exec")   footMeta = '<span class="sep">·</span><span>HITL freigegeben</span>';
     if(v.kind === "stub")   footMeta = '<span class="sep">·</span><span>kein echter Schreibzugriff</span>';
     if(v.kind === "denied") footMeta = '<span class="sep">·</span><span>vom Menschen gestoppt</span>';
+    if(v.kind === "error")  footMeta = '<span class="sep">·</span><span>Ausführung fehlgeschlagen</span>';
     if(a.hitl_note)         footMeta = '<span class="sep">·</span><span>'+esc(a.hitl_note)+'</span>';
 
     li.innerHTML =
@@ -1112,17 +1122,19 @@
   ----------------------------------------------------------------------------
   HONESTY INVARIANTS (sacred):
    [x] Green "echt" check reachable ONLY via real===true && status==='done':
-       resolveVisual() early-returns the amber "stub" visual for real!==true
-       BEFORE any status branch, so a4/a5 (real:false) can never reach the
-       'done' branch even if a buggy/hostile snapshot sets status:'done'.
+       resolveVisual() handles terminal denied/error statuses first, then
+       early-returns the amber "stub" visual for real!==true BEFORE any green
+       status branch, so a4/a5 (real:false) can never reach the 'done' branch
+       even if a buggy/hostile snapshot sets status:'done'.
        The buildNode "Freigegeben …" granted-decision line (which renders a green
        check glyph) is now ALSO gated on real===true && (v.kind==='exec'|'pending')
        && approval==='granted' && status!=='done', so a hostile snapshot
        ({real:false, approval:'granted', status:'executing'}) cannot leak a green
        check there either — the invariant is unbypassable on every render path.
    [x] real===false (crm_upsert, create_ticket) -> amber "Vorschau · nächste
-       Integration", terminal, .stub spine (neutral hair, never a done glow),
-       never a green check.
+       Integration" unless backend status is explicit denied/error; all three
+       terminal paths use .stub/warning spine styling, never a done glow, never
+       a green check.
    [x] Color never the sole signal: every tag/marker pairs color + inline SVG
        icon + text; legend explains echt vs. Vorschau persistently.
    [x] lookup_foerderung surfaces action.source verbatim in the .source block
