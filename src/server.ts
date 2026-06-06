@@ -2,6 +2,7 @@
 //   GET  /         -> the UI (web/index.html)
 //   GET  /events   -> Server-Sent Events stream of action events
 //   POST /run      -> { instruction } : runs the agent, broadcasting events
+import "./telemetry.js"; // MUSS zuerst stehen: instrumentiert LangChain vor dem ersten Run.
 import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";

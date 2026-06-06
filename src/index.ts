@@ -1,3 +1,4 @@
+import "./telemetry.js"; // MUSS zuerst stehen: instrumentiert LangChain vor dem ersten Run.
 import { readFile } from "node:fs/promises";
 import { runAgent } from "./agent.js";
 import { extractActions, type ExtractedActions } from "./extract.js";
