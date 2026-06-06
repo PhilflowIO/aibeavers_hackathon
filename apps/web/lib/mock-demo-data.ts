@@ -1,4 +1,5 @@
 import type { AnalyseResult, QaResult } from "./types";
+import { DEMO_RECIPIENT_EMAIL } from "./demo-config";
 
 /** Mock analysis output for Thomas Berger / Riester demo (Termin 1). */
 export const MOCK_ANALYSE: AnalyseResult = {
@@ -89,7 +90,7 @@ export const MOCK_ANALYSE: AnalyseResult = {
     {
       typ: "email_entwurf",
       betreff: "Unterlagen Riester-Rente + Terminbestätigung",
-      empfaenger: "thomas.berger@example.com",
+      empfaenger: DEMO_RECIPIENT_EMAIL,
     },
   ],
 };

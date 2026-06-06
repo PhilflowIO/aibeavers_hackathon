@@ -13,8 +13,26 @@ import {
   flattenTranscriptForLlm,
   loadDefaultTranscript,
 } from "../lib/transcript";
+import { DEMO_RECIPIENT_EMAIL } from "../../../lib/demo-config";
 
 export type AnalysisResult = Analysis;
+
+/**
+ * Override the demo recipient in the served fixture so a custom
+ * NEXT_PUBLIC_DEMO_RECIPIENT_EMAIL flows through to the email_entwurf empfaenger
+ * (and thus matches the live allowlist + the actual send), not just the kalender
+ * invite (which already follows kunde_email).
+ */
+function withDemoRecipient(analysis: Analysis): Analysis {
+  return {
+    ...analysis,
+    actions: analysis.actions.map((action) =>
+      action.typ === "email_entwurf"
+        ? { ...action, empfaenger: DEMO_RECIPIENT_EMAIL }
+        : action,
+    ),
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +44,9 @@ export async function POST(request: Request) {
     }
 
     if (useMockAnalysis()) {
-      return NextResponse.json(analysisBerger1 as AnalysisResult);
+      return NextResponse.json(
+        withDemoRecipient(analysisBerger1 as AnalysisResult),
+      );
     }
 
     const transcript =

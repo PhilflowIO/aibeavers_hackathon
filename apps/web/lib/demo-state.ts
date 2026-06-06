@@ -6,6 +6,7 @@ import {
   askQuestion,
   executeActions,
 } from "./api-client";
+import { DEMO_RECIPIENT_EMAIL } from "./demo-config";
 import type {
   AnalyseResult,
   ActionExecutionInfo,
@@ -244,7 +245,7 @@ export function useDemoState(
     setCrmExecuted(true);
     void executeActions({
       kunde: transcript.kunde,
-      kunde_email: "thomas.berger@example.com",
+      kunde_email: DEMO_RECIPIENT_EMAIL,
       actions: crmActions,
     })
       .then((response) => {
@@ -276,7 +277,7 @@ export function useDemoState(
     setHeroExecution({ status: "pending" });
     void executeActions({
       kunde: transcript.kunde,
-      kunde_email: "thomas.berger@example.com",
+      kunde_email: DEMO_RECIPIENT_EMAIL,
       actions: heroActions,
     })
       .then((response) => {
