@@ -11,3 +11,10 @@ dist/
 .DS_Store
 .cache/
 coverage/
+
+# Playwright MCP runtime artifacts
+.playwright-mcp/
+
+# LibreOffice/Office lock files
+*.~lock.*#
+.~lock.*#
