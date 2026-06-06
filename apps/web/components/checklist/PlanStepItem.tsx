@@ -13,7 +13,7 @@ export function PlanStepItem({ step, index, animate = false }: PlanStepItemProps
 
   return (
     <li
-      className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-all ${
+      className={`flex items-start gap-3 border-b px-1 py-3 transition-all last:border-0 ${
         animate ? "animate-checklist-reveal" : ""
       } ${statusStyles(status)}`}
       style={animate ? { animationDelay: `${index * 120}ms` } : undefined}
@@ -28,7 +28,7 @@ function StatusIcon({ status }: { status: PlanStep["status"] | "pending" }) {
   if (status === "done") {
     return (
       <span
-        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400"
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600"
         aria-label="Erledigt"
       >
         ✓
@@ -38,7 +38,7 @@ function StatusIcon({ status }: { status: PlanStep["status"] | "pending" }) {
   if (status === "warn") {
     return (
       <span
-        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-400"
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700"
         aria-label="Warnung"
       >
         !
@@ -58,10 +58,10 @@ function StatusIcon({ status }: { status: PlanStep["status"] | "pending" }) {
 function statusStyles(status: PlanStep["status"] | "pending"): string {
   switch (status) {
     case "done":
-      return "border-emerald-500/20 bg-emerald-500/5";
+      return "border-zinc-800 bg-transparent";
     case "warn":
-      return "border-amber-500/30 bg-amber-500/5";
+      return "border-amber-200 bg-amber-50/60";
     default:
-      return "border-zinc-700/60 bg-zinc-800/40";
+      return "border-zinc-800 bg-transparent";
   }
 }

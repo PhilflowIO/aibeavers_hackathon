@@ -5,7 +5,7 @@ export function DemoHeader() {
     <header className="border-b border-zinc-800 bg-zinc-950/80 px-6 py-4 backdrop-blur-sm">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-sky-400/80">
+          <p className="text-xs font-medium uppercase tracking-widest text-sky-800">
             Nacharbeits-Agent · Demo
           </p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight text-zinc-50">

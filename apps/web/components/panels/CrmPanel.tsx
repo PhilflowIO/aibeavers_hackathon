@@ -25,20 +25,20 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
     execution?.status === "success" && execution.provider && execution.provider !== "mock";
   const isMocked = status === "mocked" || (status === "success" && !liveBadge);
   const panelTone = isError
-    ? "border-rose-500/30 bg-rose-500/5"
+    ? "border-rose-300 bg-rose-50"
     : isPending || isMocked
       ? "border-zinc-700 bg-zinc-900/60"
-      : "border-emerald-500/30 bg-emerald-500/5";
+      : "border-emerald-300 bg-emerald-50";
   const iconTone = isError
-    ? "bg-rose-500/20 text-rose-300"
+    ? "bg-rose-100 text-rose-700"
     : isPending || isMocked
       ? "bg-zinc-700/80 text-zinc-300"
-      : "bg-emerald-500/20 text-emerald-300";
+      : "bg-emerald-100 text-emerald-700";
   const labelTone = isError
-    ? "text-rose-300"
+    ? "text-rose-700"
     : isPending || isMocked
       ? "text-zinc-300"
-      : "text-emerald-400";
+      : "text-emerald-700";
   const heading =
     isPending
       ? "CRM — wird angelegt"
@@ -87,7 +87,7 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
             {actionLabel}
           </span>
           {liveBadge && (
-            <span className="rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-800">
               Live · {execution.provider}
               {execution.externalId ? ` #${execution.externalId}` : ""}
             </span>
@@ -112,7 +112,7 @@ export function CrmPanel({ actions, execution }: CrmPanelProps) {
           </div>
           <div className="flex justify-between py-2">
             <dt className="text-zinc-500">Status</dt>
-            <dd className={`font-medium ${isError ? "text-rose-300" : liveBadge ? "text-emerald-400" : "text-zinc-300"}`}>
+            <dd className={`font-medium ${isError ? "text-rose-700" : liveBadge ? "text-emerald-700" : "text-zinc-300"}`}>
               {statusText}
             </dd>
           </div>

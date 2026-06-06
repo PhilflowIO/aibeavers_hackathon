@@ -26,26 +26,26 @@ export function CrossSellPanel({ signals, meetings }: CrossSellPanelProps) {
         <p className="mt-1 text-sm text-zinc-500">Beiläufiges Signal aus dem Gespräch</p>
       </header>
 
-      <div className="space-y-4 rounded-xl border border-violet-500/30 bg-violet-500/5 p-5">
+      <div className="space-y-4 rounded-xl border border-violet-200 bg-violet-50 p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-400">Signal</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">Signal</p>
           <p className="mt-1 text-base font-medium text-zinc-100">{signal.signal}</p>
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-400">Chance</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">Chance</p>
           <p className="mt-1 text-sm text-zinc-300">{signal.chance}</p>
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-400">
+          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">
             Produkte
           </p>
           <ul className="mt-2 flex flex-wrap gap-2">
             {signal.produkte.map((p) => (
               <li
                 key={p}
-                className="rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-sm text-violet-200"
+                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-sm text-violet-800"
               >
                 {p}
               </li>
