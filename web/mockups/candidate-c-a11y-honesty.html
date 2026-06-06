@@ -1,0 +1,974 @@
+<!doctype html>
+<!--
+  ============================================================================
+  Nacharbeits-Agent — philflow · AI Beavers Hackathon, Hamburg 2026-06-06
+  MERGED CANDIDATE C — "Bold Editorial" SKIN × "Live Ops Timeline" SPINE
+  ----------------------------------------------------------------------------
+  KEPT FROM BASE (editorial-bold):
+    - Warm editorial ink/paper palette + tokens (--ink/--paper/--accent #e8410f),
+      serif display font (--serif), the @media(prefers-color-scheme:dark) EDITORIAL
+      dark block (NOT donor's blue).
+    - Sticky .topbar; full .hero (kicker, big serif <h1> with <em>, .lede, italic
+      .tagline blockquote); .statstrip (3 stats); .work-head ("Die Nacharbeit – live"
+      + Frau-Schäfer subline); .legend honesty key; footer with EU/sovereignty mark.
+    - btn-primary "Nacharbeit starten" + ghost "Gespräch ansehen".
+    - Serif action title, accent-red HITL state, dashed accent divider above HITL.
+    - Tool-appropriate inline SVG icons.
+
+  ADOPTED FROM DONOR (live-timeline), RE-SKINNED to editorial tokens:
+    - Vertical timeline spine: 56px rail column, connecting .rail::after line,
+      round .marker per node, .node{grid-template-columns:56px 1fr}.
+    - Status-carrying spine: .done segment tinted --ok; .flow active segment with
+      @keyframes flow; HITL marker @keyframes throb RECOLORED to --accent (red);
+      executing spinner marker; stub marker tinted --warn.
+    - @keyframes rise node-enter with staggered nth-child delays.
+    - Transcript source card at TOP of spine (Transkript → Ableitung → Ausführung).
+    - Executing indeterminate .progress bar.
+
+  HONESTY MODEL (SACRED — enforced in markup AND JS):
+    green ✓ "echt"   -> ONLY real===true && status===done.
+    real===false     -> amber "Vorschau · nächste Integration", terminal, NEVER a
+                        green check, never a spine "done" glow.
+    Color is NEVER the sole signal: every status pairs color + icon + text.
+    lookup_foerderung surfaces action.source verbatim ("belegt, nicht geraten").
+
+  ONE client identity: Frau Schäfer · Altersvorsorge & Sanierung
+  · frau.schaefer@example.de  (donor's "M. Hofmann" removed everywhere).
+
+  A11y: :focus-visible rings; aria-live polite stream region; keyboard-operable
+  HITL (Enter=Freigeben / Esc=Ablehnen on the single awaiting node) with focus
+  management; prefers-reduced-motion kills all spine/marker animation;
+  ≥44px targets; ≥4.5:1 contrast verified in light AND dark; color never alone.
+
+  Single self-contained file. Vanilla JS, no CDN/framework/build, inline SVG only.
+  EventSource("/events"): snapshot (array → re-hydrate) + action (upsert by
+  action_id); ignores ping; survives SSE drop → re-hydrate from next snapshot.
+  Baked 5 demo actions render as FALLBACK only if no SSE within ~1.5s.
+  ============================================================================
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nacharbeits-Agent — philflow</title>
+<style>
+  /* ---------- TOKENS (editorial ink + paper) ---------- */
+  :root{
+    color-scheme: light dark;
+
+    --ink:        #0d0f14;
+    --ink-2:      #2b2f3a;
+    --paper:      #f4f1ea;   /* warm editorial off-white */
+    --paper-2:    #ffffff;
+    --line:       #1a1d24;
+    --hair:       rgba(13,15,20,.12);
+
+    /* Brand accent — confident editorial red/orange */
+    --accent:     #e8410f;
+    --accent-ink: #ffffff;
+    --accent-soft: #fbe1d7;   /* tinted accent surface (editorial, NOT donor blue) */
+
+    /* Semantic */
+    --ok:         #0c7a4d;   /* echt / green */
+    --ok-bg:      #d8f0e2;
+    --ok-line:    #0c7a4d;
+    --warn:       #8a5200;   /* Vorschau / amber (darkened for >=4.5:1 on warn-bg) */
+    --warn-bg:    #fbe7c2;
+    --warn-line:  #b06a00;
+    --live:       #0c7a4d;
+    --run:        #0a4ea3;   /* executing / blue */
+    --run-bg:     #d6e6fb;
+
+    --shadow-1: 0 1px 0 var(--hair);
+    --shadow-2: 0 6px 24px rgba(13,15,20,.10);
+    /* editorial accent glow (red, replaces donor blue glow) */
+    --shadow-glow: 0 0 0 1.5px var(--accent), 0 0 26px rgba(232,65,15,.26);
+
+    --r: 4px;
+    --r-lg: 8px;
+
+    --maxw: 1120px;
+    --t: 200ms cubic-bezier(.2,.7,.3,1);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:    #f3f0e8;
+      --ink-2:  #cbcfdb;     /* lightened for >=4.5:1 dim text on dark paper */
+      --paper:  #0c0e13;
+      --paper-2:#15181f;
+      --line:   #e8e6df;
+      --hair:   rgba(243,240,232,.16);
+      --accent: #ff5a28;
+      --accent-ink: #1a0d07;
+      --accent-soft: #2f160c;
+      --ok:     #57e0a0; --ok-bg: #0e2e22; --ok-line: #57e0a0;
+      --warn:   #ffc266; --warn-bg: #2f230d; --warn-line: #ffc266;
+      --live:   #57e0a0;
+      --run:    #7db4ff; --run-bg:#10243f;
+      --shadow-2: 0 8px 30px rgba(0,0,0,.5);
+      --shadow-glow: 0 0 0 1.5px var(--accent), 0 0 26px rgba(255,90,40,.42);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+
+  /* ---------- FOCUS (never removed) ---------- */
+  :focus-visible{
+    outline:3px solid var(--accent);
+    outline-offset:3px;
+    border-radius:3px;
+  }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    border-bottom:2px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:30;
+  }
+  .topbar .row{ display:flex; align-items:center; gap:16px; padding:14px 0; }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .logo{
+    width:40px; height:40px; flex:0 0 auto;
+    background:var(--ink); color:var(--paper);
+    border-radius:var(--r);
+    display:grid; place-items:center;
+  }
+  @media (prefers-color-scheme: dark){ .logo{ background:var(--accent); color:var(--accent-ink); } }
+  .logo svg{ width:24px; height:24px; }
+  .brand-txt{ display:flex; flex-direction:column; line-height:1.05; min-width:0; }
+  .brand-txt b{ font-size:1.02rem; letter-spacing:.2px; }
+  .brand-txt span{ font-size:.74rem; color:var(--ink-2); letter-spacing:.18em; text-transform:uppercase; }
+  .spacer{ flex:1 1 auto; }
+
+  /* Live indicator */
+  .live{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:.82rem; font-weight:700; letter-spacing:.04em;
+    padding:8px 12px; border:1.5px solid var(--ok-line);
+    color:var(--ok); border-radius:999px; background:var(--ok-bg);
+    min-height:44px;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%; background:var(--live);
+    box-shadow:0 0 0 0 var(--live);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 rgba(12,122,77,.5); }
+    70%{ box-shadow:0 0 0 8px rgba(12,122,77,0); }
+    100%{ box-shadow:0 0 0 0 rgba(12,122,77,0); }
+  }
+
+  /* ---------- HERO (editorial) ---------- */
+  .hero{ padding:54px 0 38px; }
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:.78rem; font-weight:800; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--accent);
+  }
+  .kicker .bar{ width:34px; height:3px; background:var(--accent); display:inline-block; }
+
+  .hero h1{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(2.6rem, 7vw, 5.4rem);
+    line-height:.98; letter-spacing:-.02em;
+    margin:.32em 0 .12em; max-width:16ch; text-wrap:balance;
+  }
+  .hero h1 em{ font-style:italic; color:var(--accent); }
+
+  .lede{ font-size:clamp(1.05rem, 2.1vw, 1.45rem); color:var(--ink-2); max-width:60ch; margin:0 0 6px; }
+  .tagline{
+    font-family:var(--serif); font-style:italic;
+    font-size:clamp(1.1rem, 2.2vw, 1.5rem); color:var(--ink);
+    border-left:4px solid var(--accent); padding-left:16px;
+    margin:22px 0 28px; max-width:48ch;
+  }
+
+  .hero-actions{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+
+  .btn{
+    font:inherit; font-weight:800; letter-spacing:.01em;
+    border-radius:var(--r-lg); cursor:pointer;
+    min-height:52px; padding:0 26px;
+    display:inline-flex; align-items:center; gap:10px;
+    border:2px solid transparent;
+    transition:transform var(--t), background var(--t), box-shadow var(--t);
+  }
+  .btn svg{ width:20px; height:20px; }
+  .btn:active{ transform:translateY(2px); }
+
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); font-size:1.05rem; box-shadow:var(--shadow-2); }
+  .btn-primary:hover{ background:#cf3309; }
+  @media (prefers-color-scheme: dark){ .btn-primary:hover{ background:#ff6f43; } }
+
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover{ background:var(--ink); color:var(--paper); }
+
+  .src-pill{ display:inline-flex; align-items:center; gap:8px; font-size:.8rem; color:var(--ink-2); }
+  .src-pill svg{ width:16px; height:16px; flex:0 0 auto; }
+
+  /* inline degrade hint for /run failure (never fakes success) */
+  .run-hint{
+    display:none; align-items:center; gap:8px;
+    font-size:.82rem; font-weight:700; color:var(--warn);
+    background:var(--warn-bg); border:1.5px solid var(--warn-line);
+    border-radius:999px; padding:7px 13px; min-height:36px;
+  }
+  .run-hint svg{ width:15px; height:15px; flex:0 0 auto; }
+  .run-hint.show{ display:inline-flex; }
+  .run-hint code{ font-family:var(--mono); font-weight:800; }
+
+  /* Editorial stat strip */
+  .statstrip{ display:grid; grid-template-columns:repeat(3,1fr); border-bottom:2px solid var(--line); }
+  .stat{ padding:18px 4px 22px; }
+  .stat + .stat{ border-left:1px solid var(--hair); padding-left:22px; }
+  .stat b{ display:block; font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); line-height:1; }
+  .stat span{ font-size:.82rem; color:var(--ink-2); }
+  @media (max-width:680px){
+    .statstrip{ grid-template-columns:1fr; }
+    .stat + .stat{ border-left:0; border-top:1px solid var(--hair); padding-left:4px; }
+  }
+
+  /* ---------- WORK SECTION ---------- */
+  .work{ padding:36px 0 64px; }
+  .work-head{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap; gap:16px; margin-bottom:18px;
+  }
+  .work-head h2{
+    font-family:var(--serif); font-weight:800;
+    font-size:clamp(1.6rem,4vw,2.6rem); line-height:1; margin:0; letter-spacing:-.01em;
+  }
+  .work-head p{ margin:6px 0 0; color:var(--ink-2); font-size:.95rem; }
+
+  /* Legend (persistent honesty key) */
+  .legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-radius:var(--r-lg); padding:12px 14px; box-shadow:var(--shadow-1);
+  }
+  .legend .lg{ display:inline-flex; align-items:center; gap:8px; font-size:.83rem; font-weight:600; }
+  .legend .chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 9px; border-radius:999px; font-weight:800; font-size:.74rem;
+    letter-spacing:.04em; text-transform:uppercase; border:1.5px solid;
+  }
+  .chip-ok{ color:var(--ok); background:var(--ok-bg); border-color:var(--ok-line); }
+  .chip-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .chip svg{ width:13px; height:13px; }
+  .legend .sep{ color:var(--ink-2); font-weight:400; }
+
+  /* ---------- TRANSCRIPT SOURCE (top of spine) ---------- */
+  .transcript{
+    margin:22px 0 8px;
+    background:var(--paper-2); border:1.5px solid var(--hair);
+    border-left:5px solid var(--ink);
+    border-radius:var(--r-lg); padding:16px 20px; box-shadow:var(--shadow-1);
+  }
+  .transcript-head{
+    display:flex; align-items:center; gap:8px;
+    font-size:.74rem; font-weight:800; color:var(--ink-2);
+    text-transform:uppercase; letter-spacing:.12em;
+  }
+  .transcript-head svg{ width:15px; height:15px; }
+  .transcript p{
+    margin:8px 0 0; font-family:var(--serif); font-style:italic;
+    font-size:clamp(1rem,1.6vw,1.18rem); color:var(--ink); line-height:1.55;
+  }
+  .transcript .who{ font-style:normal; font-weight:800; color:var(--accent); }
+  .flowtag{
+    margin-top:10px; font-size:.74rem; font-weight:700; letter-spacing:.04em;
+    color:var(--ink-2); display:inline-flex; align-items:center; gap:8px;
+  }
+  .flowtag .arrow{ color:var(--accent); font-weight:900; }
+
+  /* ---------- THE TIMELINE SPINE (donor mechanic, editorial skin) ---------- */
+  .timeline{ list-style:none; margin:22px 0 0; padding:0; position:relative; }
+
+  .node{
+    position:relative;
+    display:grid; grid-template-columns:56px 1fr; gap:18px;
+    padding-bottom:18px;
+    animation:rise 420ms cubic-bezier(.16,.84,.44,1) both;
+  }
+  .node:last-child{ padding-bottom:0; }
+  .node:nth-child(1){ animation-delay:.02s; }
+  .node:nth-child(2){ animation-delay:.10s; }
+  .node:nth-child(3){ animation-delay:.18s; }
+  .node:nth-child(4){ animation-delay:.26s; }
+  .node:nth-child(5){ animation-delay:.34s; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+
+  /* the connecting spine segment */
+  .rail{ position:relative; display:flex; flex-direction:column; align-items:center; }
+  .rail::after{
+    content:""; position:absolute;
+    top:50px; bottom:-6px; left:50%;
+    width:3px; transform:translateX(-50%);
+    background:var(--hair); border-radius:2px;
+  }
+  .node:last-child .rail::after{ display:none; }
+  /* completed segment tinted ok; flowing (active) segment animates */
+  .node.done .rail::after{ background:linear-gradient(180deg, var(--ok), var(--hair)); }
+  .node.flow .rail::after{
+    background:linear-gradient(180deg, var(--accent), var(--hair));
+    background-size:100% 200%;
+    animation:flow 1.6s linear infinite;
+  }
+  /* stub spine stays neutral hair — a stub never glows "done" */
+  @keyframes flow{
+    0%{ background-position:0 -40px; }
+    100%{ background-position:0 40px; }
+  }
+
+  /* node marker: editorial circle, idx number folded BESIDE it */
+  .marker{
+    width:46px; height:46px; flex:none;
+    border-radius:50%; display:grid; place-items:center;
+    background:var(--paper-2); border:2px solid var(--hair);
+    color:var(--ink-2); z-index:1; box-shadow:var(--shadow-1);
+  }
+  .marker svg{ width:22px; height:22px; }
+  .idx{
+    font-family:var(--serif); font-weight:800; font-size:.82rem;
+    color:var(--ink-2); margin-top:7px; opacity:.7; letter-spacing:.02em;
+  }
+  .node.done .marker{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ok); }
+  .node.exec .marker{ background:var(--run-bg); border-color:var(--run); color:var(--run); }
+  .node.stub .marker{ background:var(--warn-bg); border-color:var(--warn-line); color:var(--warn); }
+  /* HITL throb RECOLORED to editorial accent-red */
+  .node.hitl .marker{
+    background:var(--accent-soft); border-color:var(--accent); color:var(--accent);
+    box-shadow:var(--shadow-glow);
+    animation:throb 2s ease-in-out infinite;
+  }
+  @keyframes throb{
+    0%,100%{ box-shadow:0 0 0 1.5px var(--accent), 0 0 0 rgba(232,65,15,0); }
+    50%    { box-shadow:0 0 0 1.5px var(--accent), 0 0 22px rgba(232,65,15,.5); }
+  }
+  .spin{ animation:spin 1.1s linear infinite; transform-origin:center; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- ACTION CARD (editorial) ---------- */
+  .card{
+    background:var(--paper-2);
+    border:1.5px solid var(--hair);
+    border-left:5px solid var(--hair);
+    border-radius:var(--r-lg);
+    padding:18px 20px; box-shadow:var(--shadow-1);
+    transition:box-shadow var(--t), border-color var(--t);
+  }
+  .node.hitl .card{ border-left-color:var(--accent); box-shadow:var(--shadow-2); }
+  .node.exec .card{ border-left-color:var(--run); }
+  .node.done .card{ border-left-color:var(--ok-line); }
+  .node.stub .card{ border-left-color:var(--warn-line); }
+
+  .meta-line{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:4px; }
+  .tool{
+    font-family:var(--mono); font-size:.74rem; letter-spacing:.02em; color:var(--ink-2);
+    background:var(--paper); border:1px solid var(--hair); padding:2px 7px; border-radius:var(--r);
+  }
+  .summary{
+    font-family:var(--serif);
+    font-size:clamp(1.05rem,1.6vw,1.28rem); font-weight:800; margin:4px 0 0; line-height:1.22;
+    letter-spacing:-.01em;
+  }
+
+  /* status tags (color + text + icon) */
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 10px; border-radius:999px; font-weight:800;
+    font-size:.74rem; letter-spacing:.05em; text-transform:uppercase; border:1.5px solid;
+  }
+  .tag svg{ width:13px; height:13px; }
+  .tag-ok{   color:var(--ok);   background:var(--ok-bg);   border-color:var(--ok-line); }
+  .tag-warn{ color:var(--warn); background:var(--warn-bg); border-color:var(--warn-line); }
+  .tag-run{  color:var(--run);  background:var(--run-bg);  border-color:var(--run); }
+  .tag-wait{ color:var(--accent); background:var(--accent-soft); border-color:var(--accent); }
+
+  .detail{ font-size:.9rem; color:var(--ink-2); margin:8px 0 0; }
+  .detail strong{ color:var(--ink); }
+
+  /* source proof (lookup_foerderung — verbatim source) */
+  .source{
+    margin-top:10px; padding:10px 12px;
+    background:var(--paper); border:1px dashed var(--ok-line);
+    border-radius:var(--r); font-size:.84rem;
+    display:flex; gap:9px; align-items:flex-start;
+  }
+  .source svg{ width:16px; height:16px; flex:0 0 auto; color:var(--ok); margin-top:2px; }
+  .source .lbl{ font-weight:800; color:var(--ok); margin-right:4px; }
+  .source a{ color:var(--ink); word-break:break-all; text-decoration:underline; text-underline-offset:2px; }
+
+  .modelline{ margin-top:10px; font-size:.74rem; color:var(--ink-2); display:inline-flex; align-items:center; gap:7px; flex-wrap:wrap; }
+  .modelline svg{ width:14px; height:14px; }
+  .modelline b{ font-family:var(--mono); font-weight:700; color:var(--ink); }
+  .modelline .sep{ opacity:.5; }
+
+  /* executing indeterminate progress bar */
+  .progress{ margin-top:10px; height:6px; border-radius:999px; background:var(--run-bg); overflow:hidden; }
+  .progress > i{
+    display:block; height:100%; width:40%; border-radius:999px;
+    background:linear-gradient(90deg, transparent, var(--run), transparent);
+    animation:indet 1.4s ease-in-out infinite;
+  }
+  @keyframes indet{ 0%{ transform:translateX(-120%); } 100%{ transform:translateX(320%); } }
+
+  /* HITL controls — editorial dashed accent divider */
+  .hitl{
+    margin-top:16px; padding-top:16px; border-top:1.5px dashed var(--accent);
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  }
+  .hitl .q{ font-weight:800; font-size:.92rem; flex:1 1 220px; display:inline-flex; align-items:center; gap:9px; }
+  .hitl .q svg{ width:18px; height:18px; color:var(--accent); flex:0 0 auto; }
+  .hitl .grp{ display:flex; gap:10px; }
+  .btn-approve, .btn-deny{
+    font:inherit; font-weight:800; border-radius:var(--r-lg);
+    display:inline-flex; align-items:center; justify-content:center; gap:9px;
+    cursor:pointer; min-height:48px; min-width:44px; padding:0 22px; font-size:1rem;
+    border:2px solid transparent;
+    transition:transform var(--t), filter var(--t), background var(--t), color var(--t);
+  }
+  .btn-approve{ background:var(--ok); color:#fff; border-color:var(--ok); }
+  @media (prefers-color-scheme: dark){ .btn-approve{ color:#04140d; } }
+  .btn-approve:hover{ filter:brightness(1.08); }
+  .btn-deny{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-deny:hover{ background:var(--ink); color:var(--paper); }
+  .btn-approve:active, .btn-deny:active{ transform:translateY(2px); }
+  .btn-approve svg, .btn-deny svg{ width:18px; height:18px; }
+  .btn[disabled], .btn-approve[disabled], .btn-deny[disabled]{ opacity:.55; cursor:default; pointer-events:none; }
+
+  /* terminal denied note (local, never a green check) */
+  .denied-note{
+    margin-top:14px; padding-top:14px; border-top:1.5px dashed var(--hair);
+    display:flex; align-items:center; gap:9px; font-weight:800; font-size:.9rem; color:var(--ink-2);
+  }
+  .denied-note svg{ width:18px; height:18px; flex:0 0 auto; color:var(--ink-2); }
+
+  footer{
+    border-top:2px solid var(--line); padding:22px 0 40px;
+    color:var(--ink-2); font-size:.82rem;
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  footer .eu{ display:inline-flex; align-items:center; gap:8px; font-weight:700; color:var(--ink); }
+  footer .eu svg{ width:18px; height:18px; }
+  footer .mono{ font-family:var(--mono); }
+
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+  /* ---------- REDUCED MOTION — kills every spine/marker animation ---------- */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.001ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;
+    }
+    .dot, .node.flow .rail::after, .node.hitl .marker, .spin, .progress > i, .node{ animation:none !important; }
+    .btn:active, .btn-approve:active, .btn-deny:active{ transform:none; }
+  }
+
+  @media (max-width:560px){
+    .node{ grid-template-columns:44px 1fr; gap:14px; }
+    .marker{ width:40px; height:40px; }
+    .rail::after{ top:44px; }
+    .hero-actions{ gap:10px; }
+    .btn-primary{ width:100%; justify-content:center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="wrap row">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7h18M5 7l1.5 10h11L19 7M9 12h6"/>
+        </svg>
+      </span>
+      <span class="brand-txt">
+        <b>Nacharbeits-Agent</b>
+        <span>philflow · finance</span>
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <span class="live" id="livePill" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="liveTxt">Live verbunden</span>
+    </span>
+  </div>
+</header>
+
+<main>
+  <!-- ============ HERO ============ -->
+  <section class="hero wrap" aria-labelledby="h1">
+    <span class="kicker"><span class="bar" aria-hidden="true"></span>Nach dem Kundengespräch</span>
+    <h1 id="h1">Andere geben dir ein Protokoll. Wir geben dir deinen <em>Feierabend</em> zurück.</h1>
+    <p class="lede">
+      Klassische Notetaker liefern eine Liste. Dieser Agent <strong>erledigt</strong> die regulierte
+      Nacharbeit: Folgetermin buchen, Unterlagen-Mail schreiben, Förderung mit Quelle vorschlagen –
+      jeder Schritt mit deiner Freigabe.
+    </p>
+    <p class="tagline">„Belegt, nicht geraten.“ Souverän in der EU gehostet – Finanzdaten bleiben, wo sie hingehören.</p>
+
+    <div class="hero-actions">
+      <button class="btn btn-primary" id="startBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Nacharbeit starten
+      </button>
+      <button class="btn btn-ghost" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Gespräch ansehen
+      </button>
+      <span class="src-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        §34d/§34f-konform · EU-lokal
+      </span>
+      <span class="run-hint" id="runHint" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>
+        Kein Server — Demo per <code>make mock</code> starten
+      </span>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <div class="statstrip" aria-hidden="true">
+      <div class="stat"><b>5</b><span>Aktionen pro Gespräch</span></div>
+      <div class="stat"><b>2&nbsp;Klicks</b><span>menschliche Freigabe (HITL)</span></div>
+      <div class="stat"><b>100&nbsp;%</b><span>EU-gehostet · qwen-7b@eu-vllm</span></div>
+    </div>
+  </div>
+
+  <!-- ============ WORK / LIVE TIMELINE ============ -->
+  <section class="work wrap" aria-labelledby="workh">
+    <div class="work-head">
+      <div>
+        <h2 id="workh">Die Nacharbeit – live</h2>
+        <p>Frau Schäfer · Altersvorsorge &amp; Sanierung · heute 11:20 Uhr</p>
+      </div>
+      <div class="legend" role="note" aria-label="Legende zur Ehrlichkeit der Aktionen">
+        <span class="lg">
+          <span class="chip chip-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>echt</span>
+          Mail · Kalender · Förderung mit Quelle
+        </span>
+        <span class="sep" aria-hidden="true">|</span>
+        <span class="lg">
+          <span class="chip chip-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5h.01"/></svg>Vorschau</span>
+          Stub – noch nicht verdrahtet
+        </span>
+      </div>
+    </div>
+
+    <!-- TRANSCRIPT SOURCE — the causality anchor at top of the spine -->
+    <section class="transcript" aria-label="Gesprächs-Transkript · Quelle der Aktionen">
+      <div class="transcript-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+        Gespräch erfasst · Quelle der Aktionen
+      </div>
+      <p><span class="who">Berater:</span> „…dann lassen Sie uns das mit der KfW-Förderung für die energetische Sanierung prüfen, Frau Schäfer, wir machen einen Folgetermin und ich schicke Ihnen die Unterlagen per Mail.“</p>
+      <span class="flowtag"><span class="arrow" aria-hidden="true">↓</span>Transkript <span class="arrow" aria-hidden="true">→</span> Ableitung <span class="arrow" aria-hidden="true">→</span> Ausführung</span>
+    </section>
+
+    <!-- THE SPINE: nodes injected here (live SSE or ~1.5s fallback) -->
+    <ol class="timeline" id="list" aria-label="Nacharbeits-Aktionen · Live-Timeline" aria-live="polite" aria-relevant="additions text"></ol>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span class="eu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+    Souverän · EU-lokal gehostet
+  </span>
+  <span class="mono">finance.philflow.io · AI Beavers Hackathon Hamburg · 2026-06-06</span>
+</footer>
+
+<!--
+  PRODUCTION-WIRED SCRIPT
+  - EventSource("/events"): "snapshot" (array → wholesale re-hydrate),
+    "action" (object → upsert by action_id), "ping" ignored. Survives an SSE
+    drop and re-hydrates from the next snapshot (no hard reload).
+  - HITL: awaiting_approval && approval==null → Freigeben/Ablehnen.
+      Freigeben → POST /actions/{id}/approve {"decision":"granted"} (NO optimistic
+        "done" — waits for stream executing→done).
+      Ablehnen → {"decision":"denied"} → reflected locally as terminal.
+      Buttons disable on click. Enter=Freigeben / Esc=Ablehnen on the single awaiting node.
+  - "Nacharbeit starten" → POST /run; 404/failure → inline hint, never fakes success.
+  - Five demo actions render as FALLBACK only if no SSE within ~1.5s; any live
+    snapshot/action overrides it.
+  - HONESTY enforced in JS: renderNode() can ONLY emit a green "echt" check when
+    real===true && status==="done". real===false is FORCED to terminal amber
+    "Vorschau"; no code path turns it green or gives its spine a done-glow.
+-->
+<script>
+(function(){
+  "use strict";
+
+  var listEl   = document.getElementById('list');
+  var liveTxt  = document.getElementById('liveTxt');
+  var runHint  = document.getElementById('runHint');
+  var startBtn = document.getElementById('startBtn');
+
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ----- state: action_id -> action object ----- */
+  var actions = Object.create(null);
+  var order   = [];           // render order by action_id
+  var liveSeen = false;       // a real snapshot/action arrived
+  var fallbackShown = false;
+
+  /* ----- SVG library (inline only, no emoji) ----- */
+  var SVG = {
+    check:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>',
+    clock:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    spinner: '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9" opacity=".95"/><path d="M12 3a9 9 0 0 1 9 9" opacity=".25"/></svg>',
+    eye:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.5"/></svg>',
+    x:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+    cal:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>',
+    mail:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    search:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+    crm:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5c0-1.1 4-2 9-2s9 .9 9 2-4 2-9 2-9-.9-9-2z"/><path d="M3 5v14c0 1.1 4 2 9 2s9-.9 9-2V5"/><path d="M3 12c0 1.1 4 2 9 2s9-.9 9-2"/></svg>',
+    ticket:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>',
+    link:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>',
+    chip:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>',
+    person:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>'
+  };
+  function toolIcon(tool){
+    if(tool==='create_calendar_event') return SVG.cal;
+    if(tool==='send_mail')             return SVG.mail;
+    if(tool==='lookup_foerderung')     return SVG.search;
+    if(tool==='crm_upsert')            return SVG.crm;
+    if(tool==='create_ticket')         return SVG.ticket;
+    return SVG.chip;
+  }
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  /* ----- THE HONESTY GUARD (single source of truth for rendered status) -----
+     Returns the visual class set the node is ALLOWED to take. real===false can
+     NEVER resolve to a green/done visual; status==="done" without real===true is
+     forced to amber. This is impossible to bypass from any caller. */
+  function resolveVisual(a){
+    var real = (a.real === true);
+    var st   = a.status;
+    if(!real){
+      // Any non-real action is terminal amber "Vorschau", regardless of status.
+      return { node:'stub', tag:'tag-warn', tagIcon:SVG.eye, tagText:'Vorschau · nächste Integration', kind:'stub' };
+    }
+    if(st === 'done')               return { node:'done', tag:'tag-ok',  tagIcon:SVG.check,   tagText:'echt · erledigt',     kind:'done' };
+    if(st === 'executing')          return { node:'exec flow', tag:'tag-run', tagIcon:SVG.spinner, tagText:'wird ausgeführt', kind:'exec' };
+    if(st === 'awaiting_approval' && a.approval == null)
+                                    return { node:'hitl flow', tag:'tag-wait', tagIcon:SVG.clock,  tagText:'wartet auf Freigabe', kind:'hitl' };
+    if(st === 'awaiting_approval' && a.approval === 'denied')
+                                    return { node:'', tag:'tag-warn', tagIcon:SVG.x, tagText:'abgelehnt', kind:'denied' };
+    if(a.approval === 'denied')     return { node:'', tag:'tag-warn', tagIcon:SVG.x, tagText:'abgelehnt', kind:'denied' };
+    // pending / unknown real action
+    return { node:'', tag:'tag-wait', tagIcon:SVG.clock, tagText:'in Vorbereitung', kind:'pending' };
+  }
+
+  function markerSvg(kind, tool){
+    if(kind==='done')   return SVG.check;
+    if(kind==='exec')   return SVG.spinner;
+    if(kind==='denied') return SVG.x;
+    return toolIcon(tool);   // hitl / stub / pending use tool-appropriate icon
+  }
+
+  /* ----- render a single node (li.node) ----- */
+  function renderNode(a, idx){
+    var v = resolveVisual(a);
+    var li = document.createElement('li');
+    li.className = 'node' + (v.node ? ' ' + v.node : '');
+    li.id = 'row-' + a.action_id;
+    li.setAttribute('data-action-id', a.action_id);
+    li.setAttribute('data-real', a.real === true ? 'true' : 'false');
+    li.setAttribute('data-status', a.status || '');
+    li.setAttribute('data-kind', v.kind);
+
+    var num = ('0' + idx).slice(-2);
+    var model = a.llm_model || 'qwen-7b@eu-vllm';
+
+    var html = '';
+    // RAIL (spine + marker + folded index)
+    html += '<div class="rail" aria-hidden="true">';
+    html +=   '<div class="marker">' + markerSvg(v.kind, a.tool) + '</div>';
+    html +=   '<span class="idx">' + num + '</span>';
+    html += '</div>';
+
+    // CARD
+    html += '<article class="card">';
+    html +=   '<div class="meta-line">';
+    html +=     '<span class="tool">' + esc(a.tool) + '</span>';
+    html +=     '<span class="tag ' + v.tag + '">' + v.tagIcon + esc(v.tagText) + '</span>';
+    html +=   '</div>';
+    html +=   '<p class="summary">' + esc(a.summary) + '</p>';
+
+    // detail line (per kind)
+    if(a.detail){
+      html += '<p class="detail">' + a.detail + '</p>';
+    }
+
+    // SOURCE — only for lookup_foerderung, verbatim
+    if(a.tool === 'lookup_foerderung' && a.source){
+      html += '<div class="source">' + SVG.link +
+              '<span><span class="lbl">Quelle:</span>' +
+              '<a href="' + esc(a.source) + '" target="_blank" rel="noopener">' + esc(a.source) + '</a>' +
+              ' — belegt, nicht geraten.</span></div>';
+    }
+
+    // executing progress bar
+    if(v.kind === 'exec'){
+      html += '<div class="progress" aria-hidden="true"><i></i></div>';
+    }
+
+    // HITL controls — ONLY when awaiting_approval && approval==null
+    if(v.kind === 'hitl'){
+      html += '<div class="hitl">' +
+              '<span class="q">' + SVG.person + esc(a.hitl_prompt || 'Mensch entscheidet — diese Aktion ist echt. Jetzt freigeben?') + '</span>' +
+              '<div class="grp">' +
+                '<button class="btn-approve" type="button" data-approve="' + esc(a.action_id) + '">' + SVG.check + 'Freigeben</button>' +
+                '<button class="btn-deny" type="button" data-deny="' + esc(a.action_id) + '">' + SVG.x + 'Ablehnen</button>' +
+              '</div></div>';
+    }
+
+    // denied terminal note (never a green check)
+    if(v.kind === 'denied'){
+      html += '<div class="denied-note">' + SVG.x + 'Abgelehnt — keine Ausführung. Kein Schreibzugriff erfolgt.</div>';
+    }
+
+    // model footnote
+    html += '<span class="modelline">' + SVG.chip + 'Modell <b>' + esc(model) + '</b>';
+    if(v.kind === 'done')   html += '<span class="sep">·</span> kein weiterer Schritt nötig';
+    if(v.kind === 'hitl')   html += '<span class="sep">·</span> HITL erforderlich';
+    if(v.kind === 'exec')   html += '<span class="sep">·</span> HITL freigegeben';
+    if(v.kind === 'stub')   html += '<span class="sep">·</span> kein echter Schreibzugriff';
+    if(v.kind === 'denied') html += '<span class="sep">·</span> vom Menschen gestoppt';
+    html += '</span>';
+
+    html += '</article>';
+    li.innerHTML = html;
+    return li;
+  }
+
+  /* ----- re-render whole list from state ----- */
+  function rerender(focusId){
+    listEl.innerHTML = '';
+    order.forEach(function(id, i){
+      listEl.appendChild(renderNode(actions[id], i + 1));
+    });
+    wireHitl();
+    if(focusId){
+      var awaitBtn = document.querySelector('#row-' + cssId(focusId) + ' .btn-approve');
+      if(awaitBtn){ try{ awaitBtn.focus(); }catch(e){} }
+    }
+  }
+  function cssId(s){ return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&'); }
+
+  /* ----- HITL wiring (click + keyboard on the single awaiting node) ----- */
+  function postDecision(id, decision){
+    try{
+      fetch('/actions/' + encodeURIComponent(id) + '/approve', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ decision: decision })
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  function disableHitlButtons(li){
+    var bs = li.querySelectorAll('.btn-approve, .btn-deny');
+    for(var i=0;i<bs.length;i++){ bs[i].setAttribute('disabled','disabled'); }
+  }
+
+  function grant(id){
+    var a = actions[id];
+    if(!a || a.real !== true) return;          // honesty: only real actions can be granted
+    var li = document.getElementById('row-' + id);
+    if(li) disableHitlButtons(li);
+    a.approval = 'granted';
+    postDecision(id, 'granted');
+    // DO NOT optimistically fake "done" — keep showing approval pending until the
+    // stream advances executing->done. We render an interim "executing" so the UI
+    // moves, but only the SSE 'done' (with real===true) can produce the green check.
+    a.status = 'executing';
+    var idx = order.indexOf(id);
+    if(li){ var n = renderNode(a, idx + 1); li.replaceWith(n); wireHitl(); }
+    announce('Freigegeben. Aktion wird ausgeführt, warte auf Bestätigung des Streams.');
+  }
+
+  function deny(id){
+    var a = actions[id];
+    if(!a) return;
+    var li = document.getElementById('row-' + id);
+    if(li) disableHitlButtons(li);
+    a.approval = 'denied';                      // terminal, local
+    postDecision(id, 'denied');
+    var idx = order.indexOf(id);
+    if(li){ var n = renderNode(a, idx + 1); li.replaceWith(n); wireHitl(); }
+    announce('Abgelehnt. Keine Ausführung.');
+  }
+
+  function wireHitl(){
+    var aps = listEl.querySelectorAll('[data-approve]');
+    for(var i=0;i<aps.length;i++){
+      (function(b){ b.onclick = function(){ grant(b.getAttribute('data-approve')); }; })(aps[i]);
+    }
+    var dns = listEl.querySelectorAll('[data-deny]');
+    for(var j=0;j<dns.length;j++){
+      (function(b){ b.onclick = function(){ deny(b.getAttribute('data-deny')); }; })(dns[j]);
+    }
+  }
+
+  /* Keyboard: Enter=Freigeben / Esc=Ablehnen when focus is inside the single
+     awaiting node (the only node with .hitl). */
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Enter' && e.key !== 'Escape') return;
+    var node = e.target && e.target.closest ? e.target.closest('.node.hitl') : null;
+    if(!node) return;
+    var id = node.getAttribute('data-action-id');
+    if(!id) return;
+    // Let Enter on a button do its own click; only intercept when focus is not on the deny btn for Enter.
+    if(e.key === 'Enter'){
+      if(e.target.classList && e.target.classList.contains('btn-deny')) return; // Enter on Ablehnen = deny
+      e.preventDefault(); grant(id);
+    }else if(e.key === 'Escape'){
+      e.preventDefault(); deny(id);
+    }
+  });
+
+  /* SR announcement helper (separate live region kept terse) */
+  var srRegion = document.createElement('div');
+  srRegion.className = 'sr-only';
+  srRegion.setAttribute('role','status');
+  srRegion.setAttribute('aria-live','polite');
+  document.body.appendChild(srRegion);
+  function announce(msg){ srRegion.textContent = ''; setTimeout(function(){ srRegion.textContent = msg; }, 30); }
+
+  /* ----- upsert / snapshot from SSE ----- */
+  function upsert(a){
+    if(!a || a.action_id == null) return;
+    var id = a.action_id;
+    var existing = actions[id] || {};
+    // preserve a locally-known terminal 'denied' unless server overrides explicitly
+    var merged = {};
+    for(var k in existing){ merged[k] = existing[k]; }
+    for(var k2 in a){ merged[k2] = a[k2]; }
+    actions[id] = merged;
+    if(order.indexOf(id) === -1) order.push(id);
+  }
+
+  function hydrateSnapshot(arr){
+    actions = Object.create(null);
+    order = [];
+    if(Array.isArray(arr)){ arr.forEach(upsert); }
+    liveSeen = true;
+    rerender();
+  }
+
+  /* ----- FIVE DEMO ACTIONS (fallback only; live overrides) ----- */
+  var DEMO = [
+    { action_id:'a1', tool:'lookup_foerderung', real:true, status:'done',
+      summary:'Förderung erkannt: KfW 261 (belegt)',
+      source:'https://www.kfw.de/…261 (Stand 2026-05)',
+      llm_model:'qwen-7b@eu-vllm' },
+    { action_id:'a2', tool:'create_calendar_event', real:true, status:'awaiting_approval', approval:null,
+      summary:'Folgetermin Mi 14:00? — Einladung an Frau Schäfer',
+      detail:'Echte Aktion: legt den Termin im Kalender an und versendet die Einladung an <strong>frau.schaefer@example.de</strong> sofort.',
+      hitl_prompt:'Soll ich den Termin jetzt anlegen und die Einladung an Frau Schäfer senden?',
+      llm_model:'qwen-7b@eu-vllm' },
+    { action_id:'a3', tool:'send_mail', real:true, status:'executing',
+      summary:'Unterlagen-Mail an Frau Schäfer — wird gesendet (landet live)',
+      detail:'Freigegeben um 11:21 · Versand der Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong> …',
+      llm_model:'qwen-7b@eu-vllm' },
+    { action_id:'a4', tool:'crm_upsert', real:false, status:'stub_preview',
+      summary:'Kunde aktualisiert (Vorschau · next integration)',
+      detail:'Stub – noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation. Wird in der nächsten Integration echt ausgeführt.',
+      llm_model:'qwen-7b@eu-vllm' },
+    { action_id:'a5', tool:'create_ticket', real:false, status:'stub_preview',
+      summary:'Ticket angelegt (Vorschau · next integration)',
+      detail:'Stub – Ticketsystem folgt im nächsten Schritt. Noch keine echte Anlage.',
+      llm_model:'qwen-7b@eu-vllm' }
+  ];
+
+  function showFallback(){
+    if(liveSeen || fallbackShown) return;
+    fallbackShown = true;
+    actions = Object.create(null); order = [];
+    DEMO.forEach(upsert);
+    rerender();
+  }
+
+  /* ----- SSE wiring ----- */
+  function setLive(txt){ if(liveTxt) liveTxt.textContent = txt; }
+
+  if(typeof EventSource !== 'undefined'){
+    var es = null;
+    function connect(){
+      try{ es = new EventSource('/events'); }catch(e){ return; }
+
+      es.addEventListener('ping', function(){ /* ignore keepalive */ });
+
+      es.addEventListener('snapshot', function(ev){
+        try{ hydrateSnapshot(JSON.parse(ev.data)); }catch(e){}
+      });
+
+      es.addEventListener('action', function(ev){
+        try{
+          var a = JSON.parse(ev.data);
+          liveSeen = true;
+          upsert(a);
+          rerender();
+        }catch(e){}
+      });
+
+      es.onopen = function(){ setLive('Live verbunden'); };
+      es.onerror = function(){
+        // Survive a drop: show reconnect state. The browser auto-reconnects and
+        // the next 'snapshot' wholesale re-hydrates — no hard reload required.
+        setLive('Verbindung … erneuter Versuch');
+      };
+    }
+    connect();
+  }
+
+  /* Fallback after ~1.5s if nothing live arrived */
+  setTimeout(showFallback, 1500);
+
+  /* ----- "Nacharbeit starten" → POST /run; degrade, never fake ----- */
+  startBtn.addEventListener('click', function(){
+    setLive('Läuft …');
+    runHint.classList.remove('show');
+    var ok = false;
+    try{
+      fetch('/run', { method:'POST' }).then(function(r){
+        ok = r && r.ok;
+        if(!ok){ runHint.classList.add('show'); setLive('Live verbunden'); }
+      }).catch(function(){
+        runHint.classList.add('show'); setLive('Live verbunden');
+      });
+    }catch(e){
+      runHint.classList.add('show'); setLive('Live verbunden');
+    }
+  });
+})();
+</script>
+</body>
+</html>
