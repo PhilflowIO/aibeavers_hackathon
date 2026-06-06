@@ -1,15 +1,14 @@
 <!doctype html>
 <!--
   ============================================================================
-  PRODUCTION UI — "Editorial Spine" (FINAL merge: editorial-bold × live-timeline)
+  REFERENCE MOCKUP — "Editorial Spine" (editorial-bold × live-timeline)
   Product: Nacharbeits-Agent — philflow — AI Beavers Hackathon, Hamburg 2026-06-06
   ----------------------------------------------------------------------------
   SYNTHESIS PROVENANCE — base candidate B (winner), grafted with C + A:
     KEPT (base = candidate B / mockup-editorial-bold identity):
       - Fully data-driven architecture: ONE render(state) path; live SSE and the
-        ~1.5s fallback flow through the same builder; merge-on-upsert; real
-        connection-down visual state (.live[data-conn="down"]); robust SSE-drop
-        re-hydration from the next snapshot.
+        ~1.5s preview fallback flow through the same builder; merge-on-upsert;
+        real connection-down visual state (.live[data-conn="down"]).
       - Warm editorial palette + tokens (--ink/--paper/--accent #e8410f), --serif
         display font; sticky .topbar; full .hero (kicker, big serif <h1> with <em>
         accent, .lede, italic .tagline blockquote); .statstrip (3 stats);
@@ -51,8 +50,15 @@
         explicit per-element kill list — nothing animates.
       - .btn[disabled] sets pointer-events:none + opacity (visible & blocked) in
         addition to the element.disabled property.
-      - After fallback/snapshot render, focus moves once to the awaiting node's
+      - After preview/live render, focus moves once to the awaiting node's
         Freigeben button (rerender(focusId)) so keyboard users land on the decision.
+
+  STATUS: This file is a standalone design/reference mockup under web/mockups/.
+  It is not served by src/server.ts and does not replace web/index.html or the
+  Next app. Its live JS mirrors the current dependency-free server contract:
+  unnamed SSE messages shaped as {kind:"action", action:{id,...}} and HITL
+  POST /approve with {id, decision}. If no stream arrives, the baked fallback is
+  explicitly preview-only (real:false) so it never claims live side effects.
 
   Donor's dark-blue (#0a0f1c) / philflow-blue (#4f8cff) theme and "M. Hofmann"
   identity were fully removed. ONE client = Frau Schäfer · frau.schaefer@example.de.
@@ -640,7 +646,8 @@
 (function(){
   /* =========================================================================
      ONE render(state) builds every node from data — live SSE and the ~1.5s
-     fallback share exactly this code path. State is a Map keyed by action_id.
+     fallback share exactly this code path. State is a Map keyed by action id
+     (backend action.id, with action_id accepted for baked mockup data).
      The honesty invariant is enforced by resolveVisual() (grafted from C):
      a single guard that early-returns the amber "stub" visual whenever
      real!==true, BEFORE any status branch. The green "echt" visual is therefore
@@ -654,7 +661,7 @@
   var runHint  = document.getElementById("runHint");
   var fbNote   = document.getElementById("fallbackNote");
 
-  var state = new Map();   // action_id -> action object
+  var state = new Map();   // action id -> action object
   var order = [];          // preserves arrival order for stable spine
   var liveReceived = false;
   var isFallback = false;
@@ -692,11 +699,15 @@
   }
   var TOOL_ICON = {
     lookup_foerderung:"search", create_calendar_event:"calendar",
-    send_mail:"mail", crm_upsert:"crm", create_ticket:"ticket"
+    send_email:"mail", send_mail:"mail", crm_upsert:"crm", create_ticket:"ticket"
   };
 
   function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){
     return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"})[c]; }); }
+
+  function actionKey(a){
+    return a && (a.action_id != null ? a.action_id : a.id);
+  }
 
   /* =========================================================================
      THE HONESTY GUARD — single source of truth for a node's rendered visual.
@@ -741,10 +752,11 @@
   /* ----- the single node builder (data -> DOM) ----- */
   function buildNode(a, idx){
     var v = resolveVisual(a);
+    var key = actionKey(a);
     var li = document.createElement("li");
     li.className = "node" + (v.node ? " " + v.node : "");
-    li.id = "row-" + a.action_id;
-    li.setAttribute("data-action-id", a.action_id);
+    li.id = "row-" + key;
+    li.setAttribute("data-action-id", key);
     li.setAttribute("data-status", a.status || "");
     li.setAttribute("data-real", a.real === true ? "true" : "false");
     li.setAttribute("data-kind", v.kind);
@@ -787,8 +799,8 @@
         '<div class="hitl">'+
           '<span class="q">'+ic("person")+esc(a.prompt||"Mensch entscheidet – diese Aktion ist echt. Jetzt freigeben?")+'</span>'+
           '<div class="grp">'+
-            '<button class="btn-approve" type="button" data-approve="'+esc(a.action_id)+'">'+ic("check")+'Freigeben</button>'+
-            '<button class="btn-deny" type="button" data-deny="'+esc(a.action_id)+'">'+ic("cross")+'Ablehnen</button>'+
+            '<button class="btn-approve" type="button" data-approve="'+esc(key)+'">'+ic("check")+'Freigeben</button>'+
+            '<button class="btn-deny" type="button" data-deny="'+esc(key)+'">'+ic("cross")+'Ablehnen</button>'+
           '</div>'+
         '</div>';
     } else if(v.kind === "denied"){
@@ -866,12 +878,13 @@
     return found;
   }
 
-  /* ----- upsert one action by action_id (event "action") ----- */
+  /* ----- upsert one action by backend action.id / mockup action_id ----- */
   function upsert(a){
-    if(!a || a.action_id == null) return;
-    if(!state.has(a.action_id)) order.push(a.action_id);
+    var key = actionKey(a);
+    if(!a || key == null) return;
+    if(!state.has(key)) order.push(key);
     // merge so partial updates (e.g. status flip) keep prior fields
-    state.set(a.action_id, Object.assign({}, state.get(a.action_id)||{}, a));
+    state.set(key, Object.assign({}, state.get(key)||{}, a, { action_id: key }));
   }
 
   /* ----- wholesale re-hydrate (event "snapshot") ----- */
@@ -889,10 +902,10 @@
      deny -> terminal locally.
      ========================================================================= */
   function postDecision(id, decision){
-    return fetch("/actions/"+encodeURIComponent(id)+"/approve", {
+    return fetch("/approve", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({decision: decision})
+      body: JSON.stringify({ id: id, decision: decision })
     }).catch(function(){ /* offline demo: state still advances locally below */ });
   }
 
@@ -958,9 +971,15 @@
   document.getElementById("startBtn").addEventListener("click", function(){
     runHint.classList.remove("show");
     connText.textContent = "Läuft …";
-    fetch("/run", {method:"POST"}).then(function(r){
+    fetch("/run", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        instruction: "Führe die Nacharbeit für Frau Schäfer aus: Förderung prüfen, Folgetermin vorbereiten, Unterlagen-Mail vorschlagen."
+      })
+    }).then(function(r){
       if(!r.ok){ throw new Error("status "+r.status); }
-      // success: live stream will deliver snapshot/action events.
+      // success: live stream will deliver action events.
     }).catch(function(){
       runHint.classList.add("show");
       connText.textContent = connEl.getAttribute("data-conn")==="up" ? "Live verbunden" : "Verbindung … erneuter Versuch";
@@ -969,20 +988,20 @@
 
   /* =========================================================================
      ~1.5s FALLBACK — five baked demo actions, shown only if no SSE arrives.
-     Any live snapshot/action overrides it (liveReceived gate).
+     Any live event overrides it (liveReceived gate).
      ========================================================================= */
   var FALLBACK = [
-    { action_id:"a1", tool:"lookup_foerderung", real:true, status:"done", approval:null,
-      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (belegt)",
+    { action_id:"a1", tool:"lookup_foerderung", real:false, status:"stub_preview", approval:null,
+      llm_model:MODEL, summary:"Förderung erkannt: KfW 261 (Vorschau)",
       source:"https://www.kfw.de/…261 (Stand 2026-05)",
       source_href:"https://www.kfw.de/inlandsfoerderung/Privatpersonen/Bestehende-Immobilie/F%C3%B6rderprodukte/Wohngeb%C3%A4ude-Kredit-(261)/" },
-    { action_id:"a2", tool:"create_calendar_event", real:true, status:"awaiting_approval", approval:null,
+    { action_id:"a2", tool:"create_calendar_event", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Folgetermin Mi 14:00?", _trusted:true,
-      detail:'Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Echte Kalender-Einladung wird verschickt.',
+      detail:'Vorschau: Termin „Folgegespräch Altersvorsorge“ am <strong>Mi, 11.06.2026, 14:00–14:45</strong> für Frau Schäfer. Keine echte Kalender-Einladung ohne Live-Stream.',
       prompt:"Soll ich den Termin jetzt anlegen und die Einladung an Frau Schäfer senden?" },
-    { action_id:"a3", tool:"send_mail", real:true, status:"executing", approval:"granted",
+    { action_id:"a3", tool:"send_mail", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Unterlagen-Mail an Kunden", _trusted:true,
-      detail:'Freigegeben um 11:21 · sende Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Mail landet live.</em>' },
+      detail:'Vorschau: Beratungsunterlagen + KfW-261-Merkblatt an <strong>frau.schaefer@example.de</strong>. <em>Keine Mail wurde gesendet.</em>' },
     { action_id:"a4", tool:"crm_upsert", real:false, status:"stub_preview", approval:null,
       llm_model:MODEL, summary:"Kunde aktualisiert (Vorschau · next integration)",
       detail:"Stub – noch nicht mit dem CRM verdrahtet. Keine echte Schreiboperation. Wird in der nächsten Integration echt." },
@@ -999,8 +1018,9 @@
   }, 1500);
 
   /* =========================================================================
-     EventSource — snapshot (re-hydrate) / action (upsert) / ping (ignore).
-     Survives a drop and re-hydrates from the NEXT snapshot, no reload.
+     EventSource — current server sends unnamed data messages with kind:
+     action/run_start/run_end/answer/error. Named snapshot/action events are
+     also accepted for future mockup experiments, but are not required.
      ========================================================================= */
   function markLive(){
     if(!liveReceived){
@@ -1021,6 +1041,25 @@
       var es = new EventSource("/events");
 
       es.addEventListener("ping", function(){ /* ignore keep-alive */ });
+
+      es.onmessage = function(ev){
+        try{
+          var msg = JSON.parse(ev.data);
+          if(!msg || !msg.kind) return;
+          markLive();
+          if(msg.kind === "action" && msg.action){
+            upsert(msg.action);
+            render();
+          } else if(msg.kind === "run_start"){
+            connText.textContent = "Live läuft";
+          } else if(msg.kind === "run_end"){
+            connText.textContent = "Live abgeschlossen";
+          } else if(msg.kind === "error"){
+            runHint.classList.add("show");
+            runHint.textContent = "Live-Fehler: " + (msg.message || "unbekannt");
+          }
+        }catch(e){}
+      };
 
       es.addEventListener("snapshot", function(ev){
         try{
@@ -1043,7 +1082,7 @@
       es.onopen  = function(){ setConn(true); };
       es.onerror = function(){
         // SSE dropped — show reconnecting; browser auto-retries. We KEEP the
-        // current render and re-hydrate cleanly from the next snapshot.
+        // current render stays visible while the browser reconnects.
         setConn(false);
       };
     }catch(e){ /* no server -> fallback handles it */ }
@@ -1078,17 +1117,18 @@
   TECHNICAL CONTRACT:
    [x] Single self-contained file: inline <style> + inline <script>, vanilla JS,
        no CDN/framework/build, inline SVG only (no emoji).
-   [x] EventSource("/events"): "snapshot" (array -> wholesale re-hydrate),
-       "action" (object -> upsert by action_id), "ping" ignored.
-   [x] Survives SSE drop: onerror sets data-conn="down" + keeps render; next
-       snapshot wholesale re-hydrates, no hard reload.
+   [x] EventSource("/events"): current unnamed server messages with kind:"action"
+       upsert by action.id; named "snapshot"/"action" events remain accepted for
+       future experiments, but this mockup no longer depends on them.
+   [x] Survives SSE drop: onerror sets data-conn="down" + keeps render.
    [x] HITL: awaiting_approval && approval==null -> Freigeben/Ablehnen.
-       Freigeben -> POST /actions/{id}/approve {"decision":"granted"} (no fake done);
+       Freigeben -> POST /approve {"id", "decision":"granted"} (no fake done);
        Ablehnen -> {"decision":"denied"} reflected as terminal. Buttons disabled
        on click via element.disabled AND [disabled] (pointer-events:none + opacity).
    [x] "Nacharbeit starten" -> POST /run; 404/failure -> inline #runHint, no fake.
-   [x] Five demo actions baked as FALLBACK, shown only if no SSE within ~1.5s,
-       dimmed (.timeline.fallback) + fallback-note; any live event overrides.
+   [x] Five demo actions baked as preview-only FALLBACK (real:false), shown only
+       if no SSE within ~1.5s, dimmed (.timeline.fallback) + fallback-note; any
+       live event overrides.
    [x] a11y: :focus-visible rings; aria-live timeline + dedicated sr-only
        announce() region for grant/deny; document-scoped Enter=Freigeben /
        Esc=Ablehnen on the single awaiting node (INPUT/TEXTAREA/BUTTON/A guard);
