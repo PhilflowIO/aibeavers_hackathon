@@ -27,7 +27,6 @@ export function AppShell({ transcript }: AppShellProps) {
     qaResult,
     errorMessage,
     showMailToast,
-    heroExecution,
     crmExecution,
     startAnalysis,
     advancePanel,
@@ -41,71 +40,75 @@ export function AppShell({ transcript }: AppShellProps) {
   const showToast = showMailToast && !mailToastDismissed;
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-950 font-sans text-zinc-100">
-      <DemoHeader />
+    <div className="demo-grain flex min-h-screen flex-col">
+      <DemoHeader
+        demoState={state}
+        clientName={transcript.kunde}
+        meetingId={transcript.meetings[0]?.meeting_id}
+        meetingDate={transcript.meetings[0]?.datum}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <PrimaryCTA onStart={startAnalysis} disabled={isAnalyzing || !isIdle} />
-          {demoMode === "manual" && !isIdle && state.startsWith("panel_") && (
+      <div className="control-bar mx-auto w-full max-w-[1600px] px-6 py-3.5 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <PrimaryCTA onStart={startAnalysis} disabled={isAnalyzing || !isIdle} />
+            {demoMode === "manual" && !isIdle && state.startsWith("panel_") && (
+              <button type="button" onClick={advancePanel} className="btn-secondary">
+                Nächstes Panel →
+              </button>
+            )}
+            {!isIdle && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMailToastDismissed(false);
+                  reset();
+                }}
+                className="btn-ghost min-h-[44px] px-1"
+              >
+                Zurücksetzen
+              </button>
+            )}
+          </div>
+
+          <div
+            className="flex items-center gap-1 rounded-lg border border-border-subtle bg-canvas-raised/60 p-1"
+            role="group"
+            aria-label="Demo-Modus"
+          >
+            <span className="px-2 text-[11px] font-medium uppercase tracking-wider text-ink-faint">
+              Modus
+            </span>
             <button
               type="button"
-              onClick={advancePanel}
-              className="rounded-lg border border-zinc-600 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+              onClick={() => setDemoMode("auto")}
+              className={`mode-toggle ${demoMode === "auto" ? "mode-toggle--active" : "mode-toggle--idle"}`}
             >
-              Nächstes Panel →
+              Auto
             </button>
-          )}
-          {!isIdle && (
             <button
               type="button"
-              onClick={() => {
-                setMailToastDismissed(false);
-                reset();
-              }}
-              className="text-sm text-zinc-500 hover:text-zinc-300"
+              onClick={() => setDemoMode("manual")}
+              className={`mode-toggle ${demoMode === "manual" ? "mode-toggle--active" : "mode-toggle--idle"}`}
             >
-              Zurücksetzen
+              Manuell
             </button>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-zinc-500">Modus:</span>
-          <button
-            type="button"
-            onClick={() => setDemoMode("auto")}
-            className={`rounded px-2 py-1 ${demoMode === "auto" ? "bg-sky-600 text-white" : "text-zinc-400 hover:bg-zinc-800"}`}
-          >
-            Auto
-          </button>
-          <button
-            type="button"
-            onClick={() => setDemoMode("manual")}
-            className={`rounded px-2 py-1 ${demoMode === "manual" ? "bg-sky-600 text-white" : "text-zinc-400 hover:bg-zinc-800"}`}
-          >
-            Manuell
-          </button>
+          </div>
         </div>
       </div>
 
-      <div className="px-6 py-2">
+      <div className="mx-auto w-full max-w-[1600px] px-6 py-3 lg:px-8">
         <RoadmapBanner />
       </div>
 
-      <main className="flex flex-1 gap-0 px-6 pb-6">
-        {/* Left: 30% checklist */}
-        <aside className="w-[30%] min-w-[240px] shrink-0 border-r border-zinc-800 pr-5">
-          <PlanChecklist
-            steps={visiblePlanSteps}
-            isRevealing={isRevealing}
-          />
+      <main className="mx-auto flex w-full max-w-[1600px] flex-1 gap-0 px-6 pb-8 lg:gap-2 lg:px-8">
+        <aside className="w-full shrink-0 border-border-subtle pr-0 lg:sticky lg:top-[7.5rem] lg:w-[min(30%,320px)] lg:self-start lg:border-r lg:pr-6 lg:pt-1">
+          <PlanChecklist steps={visiblePlanSteps} isRevealing={isRevealing} />
         </aside>
 
-        {/* Right: 70% panels */}
-        <section className="relative w-[70%] flex-1 pl-5">
+        <section className="relative mt-6 min-h-[480px] flex-1 lg:mt-0 lg:pl-6">
           <AnalyzingOverlay visible={isAnalyzing} />
-          <div className="h-full min-h-[480px] rounded-xl border border-zinc-800 bg-zinc-900/30 p-5">
+          <div className="panel-surface h-full p-5 lg:p-6">
             <PanelOrchestrator
               state={state}
               analysis={analysis}
@@ -113,7 +116,6 @@ export function AppShell({ transcript }: AppShellProps) {
               errorMessage={errorMessage}
               meetings={transcript.meetings}
               crmExecution={crmExecution ?? undefined}
-              heroExecution={heroExecution ?? undefined}
               onRunQa={runQa}
               onRetry={reset}
             />
@@ -123,8 +125,6 @@ export function AppShell({ transcript }: AppShellProps) {
 
       <HeroMailToast
         visible={showToast}
-        isLive={heroExecution?.isLive ?? false}
-        externalId={heroExecution?.externalId}
         onDismiss={() => setMailToastDismissed(true)}
       />
     </div>

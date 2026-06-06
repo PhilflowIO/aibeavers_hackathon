@@ -25,32 +25,30 @@ export function QaPanel({ onAsk, loading = false }: QaPanelProps) {
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <section className="qa-panel flex flex-col gap-4 rounded-xl border border-border-subtle bg-canvas-raised/40 p-4">
       <header>
-        <h2 className="text-sm font-semibold text-zinc-100">Frage stellen</h2>
-        <p className="text-xs text-zinc-500">
-          Antworten mit Belegen aus dem Transkript
+        <h3 className="text-sm font-semibold text-ink">Frage stellen</h3>
+        <p className="mt-0.5 text-xs text-ink-faint">
+          Antworten nur aus dem Transkript — mit Quellenbelegen
         </p>
       </header>
 
-      <PresetQuestions
-        disabled={loading}
-        onSelect={(preset) => submit(preset)}
-      />
+      <PresetQuestions disabled={loading} onSelect={(preset) => submit(preset)} />
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           placeholder="Eigene Frage eingeben…"
           disabled={loading}
-          className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-sky-500/60 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50"
+          aria-label="Eigene Frage"
+          className="input-editorial min-h-[44px]"
         />
         <button
           type="submit"
           disabled={loading || !question.trim()}
-          className="shrink-0 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-md bg-brass px-5 py-2 text-sm font-semibold text-canvas transition hover:bg-brass-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "…" : "Fragen"}
         </button>

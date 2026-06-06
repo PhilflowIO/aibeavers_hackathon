@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { synthesizeSpeech } from "../../lib/api-client";
 
 interface VoicePlayerProps {
@@ -12,6 +12,8 @@ export function VoicePlayer({ text, src }: VoicePlayerProps) {
   const [audioUrl, setAudioUrl] = useState<string | undefined>(src);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (src) {
@@ -37,9 +39,7 @@ export function VoicePlayer({ text, src }: VoicePlayerProps) {
         setAudioUrl(url);
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Sprachausgabe nicht verfügbar",
-          );
+          setError(err instanceof Error ? err.message : "Sprachausgabe nicht verfügbar");
           setAudioUrl(undefined);
         }
       } finally {
@@ -54,26 +54,44 @@ export function VoicePlayer({ text, src }: VoicePlayerProps) {
   }, [text, src]);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2">
-      <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        Voice
-      </span>
+    <div className="qa-voice flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-canvas-raised/60 px-3 py-2.5">
+      <span className="text-xs font-medium uppercase tracking-wide text-ink-faint">Voice</span>
+
       {loading && (
-        <span className="text-xs text-zinc-500">Audio wird geladen…</span>
-      )}
-      {!loading && audioUrl && (
-        <audio
-          controls
-          autoPlay
-          preload="none"
-          src={audioUrl}
-          className="h-8 max-w-full flex-1 accent-violet-500"
-        />
-      )}
-      {!loading && !audioUrl && (
-        <span className="text-xs text-zinc-500">
-          {error ?? "ElevenLabs nicht konfiguriert — Textantwort oben"}
+        <span className="flex items-center gap-2 text-xs text-ink-faint">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brass/25 border-t-brass" />
+          Audio wird geladen…
         </span>
+      )}
+
+      {!loading && audioUrl && (
+        <>
+          {playing && (
+            <span className="flex items-center gap-1 text-xs text-sage">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sage" />
+              Spielt ab
+            </span>
+          )}
+          <audio
+            ref={audioRef}
+            controls
+            autoPlay
+            preload="none"
+            src={audioUrl}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+            className="h-9 min-w-[200px] max-w-full flex-1 accent-brass"
+          />
+        </>
+      )}
+
+      {!loading && !audioUrl && (
+        <p className="text-xs text-ink-faint">
+          {error
+            ? `Sprachausgabe nicht verfügbar (${error}) — Textantwort oben`
+            : "ElevenLabs nicht konfiguriert — Textantwort oben"}
+        </p>
       )}
     </div>
   );

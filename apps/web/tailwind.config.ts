@@ -8,33 +8,68 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        zinc: {
-          50: "#0f172a",
-          100: "#111827",
-          200: "#1f2937",
-          300: "#334155",
-          400: "#475569",
-          500: "#64748b",
-          600: "#94a3b8",
-          700: "#cbd5e1",
-          800: "#e2e8f0",
-          900: "#f8fafc",
-          950: "#ffffff",
+        canvas: {
+          DEFAULT: "var(--canvas)",
+          raised: "var(--canvas-raised)",
+          surface: "var(--canvas-surface)",
+          overlay: "var(--canvas-overlay)",
         },
-        surface: {
-          DEFAULT: "#ffffff",
-          raised: "#f8fafc",
-          border: "#dbe4ef",
+        ink: {
+          DEFAULT: "var(--ink)",
+          muted: "var(--ink-muted)",
+          faint: "var(--ink-faint)",
         },
-        accent: {
-          DEFAULT: "#10b981",
-          muted: "#059669",
-          glow: "#34d399",
+        border: {
+          DEFAULT: "var(--border)",
+          subtle: "var(--border-subtle)",
+        },
+        brass: {
+          DEFAULT: "var(--brass)",
+          hover: "var(--brass-hover)",
+          muted: "var(--brass-muted)",
+          glow: "var(--brass-glow)",
+        },
+        sage: {
+          DEFAULT: "var(--sage)",
+          muted: "var(--sage-muted)",
+        },
+        warn: {
+          DEFAULT: "var(--amber-warn)",
+          muted: "var(--amber-warn-muted)",
+        },
+        beleg: {
+          DEFAULT: "var(--beleg)",
+          muted: "var(--beleg-muted)",
+          border: "var(--beleg-border)",
+        },
+        speaker: {
+          advisor: "var(--speaker-advisor)",
+          client: "var(--speaker-client)",
+        },
+        cross: {
+          DEFAULT: "var(--accent-cross)",
+          muted: "var(--accent-cross-muted)",
+          border: "var(--accent-cross-border)",
+        },
+        danger: {
+          DEFAULT: "var(--danger)",
+          muted: "var(--danger-muted)",
+          border: "var(--danger-border)",
+        },
+        highlight: {
+          DEFAULT: "var(--highlight)",
+          ring: "var(--highlight-ring)",
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "ui-monospace", "monospace"],
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+      },
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
       },
     },
   },

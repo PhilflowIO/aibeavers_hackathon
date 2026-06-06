@@ -9,56 +9,63 @@ interface CrossSellPanelProps {
 }
 
 export function CrossSellPanel({ signals, meetings }: CrossSellPanelProps) {
-  const signal = signals[0];
-
-  if (!signal) {
+  if (signals.length === 0) {
     return (
-      <article className="flex h-full items-center justify-center text-sm text-zinc-500">
-        Keine Verkaufschancen erkannt.
+      <article className="flex h-full flex-col items-center justify-center text-center">
+        <p className="font-display text-base text-ink-muted">Keine Verkaufschancen erkannt</p>
+        <p className="mt-1 text-xs text-ink-faint">Kein beiläufiges Lebensereignis im Transkript</p>
       </article>
     );
   }
 
   return (
-    <article className="flex h-full flex-col">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-zinc-50">Verkaufschance</h2>
-        <p className="mt-1 text-sm text-zinc-500">Beiläufiges Signal aus dem Gespräch</p>
+    <article className="flex h-full flex-col gap-4 overflow-y-auto">
+      <header className="panel-heading">
+        <h2 className="panel-heading-title">Verkaufschancen</h2>
+        <p className="panel-heading-sub">
+          {signals.length} Signal{signals.length > 1 ? "e" : ""} aus dem Gespräch
+        </p>
       </header>
 
-      <div className="space-y-4 rounded-xl border border-violet-200 bg-violet-50 p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">Signal</p>
-          <p className="mt-1 text-base font-medium text-zinc-100">{signal.signal}</p>
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">Chance</p>
-          <p className="mt-1 text-sm text-zinc-300">{signal.chance}</p>
-        </div>
-
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-violet-700">
-            Produkte
-          </p>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {signal.produkte.map((p) => (
-              <li
-                key={p}
-                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-sm text-violet-800"
-              >
-                {p}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {signal.belege.length > 0 && (
-          <div className="pt-1">
-            <BelegChips belege={signal.belege} meetings={meetings} />
+      {signals.map((signal, i) => (
+        <div
+          key={`${signal.signal}-${i}`}
+          className="space-y-4 rounded-xl border border-cross-border bg-cross-muted p-5"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cross">Signal</p>
+            <p className="mt-1 text-base font-medium text-ink">{signal.signal}</p>
           </div>
-        )}
-      </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cross">Chance</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-muted">{signal.chance}</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-cross">Produkte</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {signal.produkte.map((p) => (
+                <li
+                  key={p}
+                  className="rounded-full border border-cross-border bg-canvas-raised/50 px-3 py-1 text-sm text-ink"
+                >
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {signal.belege.length > 0 && (
+            <div className="border-t border-cross-border/50 pt-3">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-ink-faint">
+                Beleg im Transkript
+              </p>
+              <BelegChips belege={signal.belege} meetings={meetings} />
+            </div>
+          )}
+        </div>
+      ))}
     </article>
   );
 }

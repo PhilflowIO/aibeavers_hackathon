@@ -13,14 +13,14 @@ interface PresetQuestionsProps {
 
 export function PresetQuestions({ onSelect, disabled = false }: PresetQuestionsProps) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Beispielfragen">
       {PRESET_QUESTIONS.map((question) => (
         <button
           key={question}
           type="button"
           disabled={disabled}
           onClick={() => onSelect(question)}
-          className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-left text-xs text-zinc-300 transition hover:border-zinc-600 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[36px] max-w-full rounded-full border border-border bg-canvas-raised/80 px-3 py-2 text-left text-xs leading-snug text-ink-muted transition duration-200 hover:border-brass-glow hover:bg-brass-muted hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass disabled:cursor-not-allowed disabled:opacity-50"
         >
           {question}
         </button>

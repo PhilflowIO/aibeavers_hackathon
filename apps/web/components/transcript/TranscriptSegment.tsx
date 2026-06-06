@@ -27,32 +27,27 @@ export function TranscriptSegment({
 
   const speakerClass =
     segment.speaker === "Berater"
-      ? "text-emerald-700"
+      ? "text-speaker-advisor"
       : segment.speaker === "Kunde"
-        ? "text-violet-700"
-        : "text-zinc-300";
+        ? "text-speaker-client"
+        : "text-ink-muted";
 
   return (
     <article
       id={`segment-${meeting_id}-${index}`}
       ref={(node) => registerSegmentRef(meeting_id, index, node)}
       className={[
-        "border-b px-1 py-2.5 transition-colors duration-300 last:border-0",
-        highlighted
-          ? "rounded-md border-sky-300 bg-sky-50 px-3 ring-2 ring-sky-200 animate-pulse"
-          : "border-zinc-800 hover:bg-zinc-900/70",
+        "segment-card scroll-mt-4",
+        highlighted ? "segment-card--active animate-segment-flash" : "",
       ].join(" ")}
     >
-      <header className="mb-1 flex items-baseline gap-2 text-xs">
+      <header className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
         <span className={`font-semibold ${speakerClass}`}>{segment.speaker}</span>
-        <time
-          className="font-mono text-zinc-500"
-          dateTime={`PT${segment.start_sec}S`}
-        >
+        <time className="font-mono text-ink-faint" dateTime={`PT${segment.start_sec}S`}>
           {formatSec(segment.start_sec)}–{formatSec(segment.end_sec)}
         </time>
       </header>
-      <p className="text-sm leading-relaxed text-zinc-200">{segment.text}</p>
+      <p className="text-sm leading-relaxed text-ink">{segment.text}</p>
     </article>
   );
 }
