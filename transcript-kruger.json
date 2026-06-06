@@ -1,0 +1,26 @@
+{
+  "_hinweis": "Demo-Transkript C — Neukunde-Onboarding + neuer Förder-Cluster. Sarah Krüger steht WEDER im Pipedrive-CRM NOCH im CardDAV-Adressbuch. Im Demo-Ablauf wird sie ZUERST per search_contacts/create_contact (CardDAV) angelegt (Onboarding-Akt), DANACH löst resolve_contact sie auf und der echte Invite geht raus. kunde_email ist im Transkript genannt (hello@philflow.io) — dient als email_hint, die verifizierte Quelle bleibt CardDAV. Förder-Anlass ist Existenzgründung (Gründungszuschuss + InnoStartBonus Sachsen) — bewusst ein ANDERER Cluster als die BEG/Energie-Szenarien, um die Breite des Förder-Index zu zeigen.",
+  "kunde": "Sarah Krüger",
+  "kunde_email": "hello@philflow.io",
+  "meetings": [
+    {
+      "meeting_id": "kruger-1",
+      "titel": "Erstberatung Existenzgründung / Café in Leipzig",
+      "datum": "2026-06-05",
+      "_demo_anker": "Existenzgründung Gastronomie Sachsen = Förder-Anlass (Gründungszuschuss/InnoStartBonus). Neukundin, noch in keinem Store -> create_contact-Pfad. Folgetermin 'nächste Woche vormittags' (Terminvorschlag -> find_free_slot). ESG-Frage FEHLT -> offene Compliance-Lücke.",
+      "segments": [
+        {"speaker": "Berater", "start_sec": 0, "end_sec": 12, "text": "Willkommen, Frau Krüger. Sie hatten geschrieben, Sie wollen sich selbstständig machen — erzählen Sie mal, was Sie planen."},
+        {"speaker": "Kunde", "start_sec": 12, "end_sec": 30, "text": "Genau. Ich möchte ein Café in Leipzig eröffnen, mit Rösterei und kleinem Frühstücksangebot. Ich bin gelernte Konditorin, arbeite aktuell noch angestellt, will aber im Herbst gründen."},
+        {"speaker": "Berater", "start_sec": 30, "end_sec": 40, "text": "Spannend. Haben Sie schon eine Vorstellung vom Kapitalbedarf und von Eigenmitteln?"},
+        {"speaker": "Kunde", "start_sec": 40, "end_sec": 58, "text": "Ich rechne mit rund 90.000 Euro für Umbau, Röstmaschine und Anlaufkosten. Eigenkapital habe ich etwa 25.000. Den Rest müsste ich finanzieren, und ich habe gehört, es gibt Gründungsförderung — da kenne ich mich aber gar nicht aus."},
+        {"speaker": "Berater", "start_sec": 58, "end_sec": 72, "text": "Da gibt es tatsächlich einiges, sowohl bundesweit als auch speziell für Sachsen. Ich stelle Ihnen die passenden Gründungsprogramme zusammen — Zuschüsse und zinsgünstige Gründerkredite."},
+        {"speaker": "Kunde", "start_sec": 72, "end_sec": 84, "text": "Das wäre super. Erreichen können Sie mich am besten unter hello@philflow.io, da les ich alles."},
+        {"speaker": "Berater", "start_sec": 84, "end_sec": 95, "text": "Notiere ich. Wie risikobereit sind Sie bei einer ergänzenden Altersvorsorge fürs Unternehmertum — eher sicherheitsorientiert oder chancenorientiert?"},
+        {"speaker": "Kunde", "start_sec": 95, "end_sec": 104, "text": "Als Gründerin bin ich schon chancenorientiert, sonst würde ich das ja nicht machen. Aber die Basis soll sicher sein."},
+        {"speaker": "Berater", "start_sec": 104, "end_sec": 116, "text": "Verstanden. Für heute halte ich die Eckdaten fest und schicke Ihnen die Förder-Shortlist. Lassen Sie uns den Businessplan und die Finanzierung beim nächsten Termin durchgehen."},
+        {"speaker": "Kunde", "start_sec": 116, "end_sec": 126, "text": "Sehr gern. Können wir nächste Woche? Vormittags passt mir am besten, ich arbeite ja noch."},
+        {"speaker": "Berater", "start_sec": 126, "end_sec": 138, "text": "Mache ich. Ich lege einen Folgetermin an, schicke Ihnen die Einladung und die Übersicht der Gründungsförderung zu. Die wichtigsten Eckdaten notiere ich mir gleich."}
+      ]
+    }
+  ]
+}

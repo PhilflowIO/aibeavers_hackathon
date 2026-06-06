@@ -1,4 +1,5 @@
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import type { DynamicStructuredTool } from "@langchain/core/tools";
@@ -22,6 +23,32 @@ function buildEnv(): Record<string, string> {
   );
 }
 
+/**
+ * Resolve the `uv` executable to an ABSOLUTE path.
+ *
+ * The MCP child is spawned with an explicit `cwd` (the Fördermittel project, so
+ * `uv` finds its venv/Qdrant). On Node/libuv, passing both `cwd` and an explicit
+ * `env` makes a bare command like `"uv"` fail to resolve against `PATH`
+ * (`spawn uv ENOENT`), even though `uv` is on `PATH` — the lookup interacts badly
+ * with the changed working directory. Resolving to an absolute path up-front makes
+ * `cwd` irrelevant to executable resolution. `FOERDER_UV_BIN` overrides; if neither
+ * the override nor a `command -v uv` lookup succeeds, fall back to the bare name
+ * (graceful-degradation path still catches a genuinely missing `uv`).
+ */
+function resolveUvBin(): string {
+  if (process.env.FOERDER_UV_BIN) return process.env.FOERDER_UV_BIN;
+  try {
+    const found = execSync("command -v uv", {
+      encoding: "utf8",
+      shell: "/bin/sh",
+    }).trim();
+    if (found) return found;
+  } catch {
+    /* not on PATH for the lookup shell — fall back to bare name */
+  }
+  return "uv";
+}
+
 export async function loadFoerderTools(): Promise<DynamicStructuredTool[]> {
   if (_tools) return _tools;
 
@@ -29,7 +56,7 @@ export async function loadFoerderTools(): Promise<DynamicStructuredTool[]> {
     _client = new MultiServerMCPClient({
       foerder: {
         transport: "stdio",
-        command: "uv",
+        command: resolveUvBin(),
         args: ["run", "foerder-mcp", "--transport", "stdio"],
         // cwd ist PFLICHT, damit `uv` das foerder-venv, dessen .env (DEEPINFRA_TOKEN)
         // und den ingestierten Qdrant-Index findet. Env-überschreibbar.
